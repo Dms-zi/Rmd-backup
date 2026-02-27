@@ -1,0 +1,158 @@
+---
+title: "Xaringan Test Deck"
+subtitle: "Ubuntu 22.04 + VS Code 빠른 점검"
+author: "Your Name"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["default", "default-fonts"]
+    nature:
+      ratio: "16:9"
+      highlightStyle: "github"
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+<style>
+.remark-slide-content {
+  font-size: 24px;
+}
+h1, h2, h3 {
+  letter-spacing: 0.3px;
+}
+.small {
+  font-size: 18px;
+  opacity: 0.85;
+}
+.muted {
+  opacity: 0.7;
+}
+</style>
+
+class: center, middle
+
+# Xaringan 테스트
+## VS Code에서 렌더/프리뷰 확인용
+
+.small.muted
+이 문서는 단일 Rmd로 동작하는 최소 테스트 덱입니다.
+
+---
+
+# 목표
+
+- R Markdown → HTML 슬라이드 생성 확인
+- 코드 청크 렌더 확인
+- 플롯/테이블/수식 표시 확인
+- (선택) 이미지 로딩 확인
+
+---
+
+# 간단한 R 코드
+
+아래는 랜덤 샘플 데이터 요약입니다.
+
+```{r}
+set.seed(42)
+x <- rnorm(100)
+summary(x)
+```
+
+---
+
+# 간단한 플롯
+
+```{r}
+hist(x, main = "Histogram of x", xlab = "x")
+```
+
+---
+
+# 테이블 출력
+
+```{r}
+df <- data.frame(
+  id = 1:5,
+  value = round(rnorm(5), 3)
+)
+knitr::kable(df)
+```
+
+---
+
+# 수식
+
+인라인 수식 예: $\mu$, $\sigma$  
+
+블록 수식 예:
+
+$$
+\hat{\mu} = \frac{1}{n}\sum_{i=1}^n x_i
+$$
+
+---
+
+# 점진적(Incremental) 리스트
+
+- 항목 1
+- 항목 2
+- 항목 3
+
+---
+
+# 두 컬럼 레이아웃 예시
+
+.pull-left[
+## Left
+- 요약
+- 핵심 포인트
+- 실험 조건
+]
+
+.pull-right[
+## Right
+- 결과
+- 해석
+- 다음 단계
+]
+
+---
+
+# 이미지 테스트(옵션)
+
+아래 경로에 이미지를 하나 넣어보세요:
+
+- `assets/img/sample.png`
+
+파일이 없으면 메시지만 출력되고 에러는 나지 않습니다.
+
+```{r, echo=FALSE, out.width="60%"}
+img_path <- "assets/img/sample.png"
+if (file.exists(img_path)) {
+  knitr::include_graphics(img_path)
+} else {
+  cat("No image found at: ", img_path,
+      "\n(Place a PNG there to test image rendering.)")
+}
+```
+
+---
+
+# 작업 팁
+
+- 라이브 프리뷰:
+```r
+xaringan::inf_mr("slides.Rmd")
+```
+
+- 단순 빌드:
+```r
+rmarkdown::render("slides.Rmd")
+```
+
+---
+
+class: center, middle
+
+# 끝

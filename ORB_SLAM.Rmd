@@ -1,0 +1,177 @@
+---
+title: "ORB SLAM: a Versatile and Accurate Monocular SLAM System"
+subtitle: "2026-1"
+author: "Eunji Lee"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["default", "default-fonts"]
+    nature:
+      ratio: "16:9"
+      highlightStyle: "github"
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+<style>
+.remark-slide-content {
+  font-size: 24px;
+}
+h1, h2, h3 {
+  letter-spacing: 0.3px;
+}
+.small {
+  font-size: 18px;
+  opacity: 0.85;
+}
+.muted {
+  opacity: 0.7;
+}
+</style>
+# Table of Contents
+1. Introduction
+2. System Overview
+3. Automatic Map Initialization
+4. Tracking
+5. Local Mapping
+6. Loop Closing
+7. Experiments
+8. Conclusion
+---
+# Introduction
+## Bundle Adjustment (BA)
+- SLAM 시스템의 핵심 요소로 3D map point와 camera pose를 최적화하는 과정
+- 3D map point를 keyframe에 projection하여 reprojection error를 최소화하는 최적화 문제
+- 제공해야하는 조건   
+  1. Corresponding observations of map points(scene features) 
+  <!--키프레임들의 부분집합사이에서 동일한 3d map point에 대해서 정확한 관측값(픽셀좌표) 제공해야 최적화 가능 -->
+  2. Keyframe selection avoiding unnecessary redundancy
+  <!-- keyframe이 너무 증가하면 BA 복잡성 증가-> ORBSLAM은 survival of the fittest 전략 사용(적자생존) -->
+  3. A strong network configuration of keyframes and points
+  <!-- 충분한 시차를 가진 keyframe 세트와 loop closure 매치로 달성 -->
+  4. An Initial estimation for the non-linear optimization
+  <!-- BA는 non-linear optimization이므로 초기 추정값이 중요 -->
+  5. A local map in exploration for scalability
+  <!-- 실시간 어플레키에션 실현 위해 BA는 탐색에서 지역 맵에 대해서만 수행하여 확장성 달성 -->
+  6. The ability to perform fast global optimizations for loop closing
+  <!-- pose graph와 fast global optimization을 통해 루프 클로징 시 빠른 전역 최적화 수행 -->
+
+---
+
+# 목표
+
+- R Markdown → HTML 슬라이드 생성 확인
+- 코드 청크 렌더 확인
+- 플롯/테이블/수식 표시 확인
+- (선택) 이미지 로딩 확인
+
+---
+
+# 간단한 R 코드
+
+아래는 랜덤 샘플 데이터 요약입니다.
+
+```{r}
+set.seed(42)
+x <- rnorm(100)
+summary(x)
+```
+
+---
+
+# 간단한 플롯
+
+```{r}
+hist(x, main = "Histogram of x", xlab = "x")
+```
+
+---
+
+# 테이블 출력
+
+```{r}
+df <- data.frame(
+  id = 1:5,
+  value = round(rnorm(5), 3)
+)
+knitr::kable(df)
+```
+
+---
+
+# 수식
+
+인라인 수식 예: $\mu$, $\sigma$  
+
+블록 수식 예:
+
+$$
+\hat{\mu} = \frac{1}{n}\sum_{i=1}^n x_i
+$$
+
+---
+
+# 점진적(Incremental) 리스트
+
+- 항목 1
+- 항목 2
+- 항목 3
+
+---
+
+# 두 컬럼 레이아웃 예시
+
+.pull-left[
+## Left
+- 요약
+- 핵심 포인트
+- 실험 조건
+]
+
+.pull-right[
+## Right
+- 결과
+- 해석
+- 다음 단계
+]
+
+---
+
+# 이미지 테스트(옵션)
+
+아래 경로에 이미지를 하나 넣어보세요:
+
+- `assets/img/sample.png`
+
+파일이 없으면 메시지만 출력되고 에러는 나지 않습니다.
+
+```{r, echo=FALSE, out.width="60%"}
+img_path <- "assets/img/sample.png"
+if (file.exists(img_path)) {
+  knitr::include_graphics(img_path)
+} else {
+  cat("No image found at: ", img_path,
+      "\n(Place a PNG there to test image rendering.)")
+}
+```
+
+---
+
+# 작업 팁
+
+- 라이브 프리뷰:
+```r
+xaringan::inf_mr("slides.Rmd")
+```
+
+- 단순 빌드:
+```r
+rmarkdown::render("slides.Rmd")
+```
+
+---
+
+class: center, middle
+
+# 끝

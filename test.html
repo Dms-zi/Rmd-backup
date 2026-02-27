@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+
+<head>
+  <title>Xaringan Test Deck</title>
+  <meta charset="utf-8" />
+  <meta name="author" content="Your Name" />
+  <meta name="date" content="2025-12-09" />
+  <script src="libs/header-attrs-2.30/header-attrs.js"></script>
+  <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+  <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+</head>
+
+<body>
+  <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Xaringan Test Deck
+]
+.subtitle[
+## Ubuntu 22.04 + VS Code 빠른 점검
+]
+.author[
+### Your Name
+]
+.date[
+### 2025-12-09
+]
+
+---
+
+
+&lt;!-- 인라인 CSS: 이 Rmd 하나만으로 테스트 가능 --&gt;
+&lt;style&gt;
+.remark-slide-content {
+  font-size: 24px;
+}
+h1, h2, h3 {
+  letter-spacing: 0.3px;
+}
+.small {
+  font-size: 18px;
+  opacity: 0.85;
+}
+.muted {
+  opacity: 0.7;
+}
+&lt;/style&gt;
+
+class: center, middle
+
+# Xaringan 테스트
+## VS Code에서 렌더/프리뷰 확인용
+
+.small.muted
+이 문서는 단일 Rmd로 동작하는 최소 테스트 덱입니다.
+
+---
+
+# 목표
+
+- R Markdown → HTML 슬라이드 생성 확인
+- 코드 청크 렌더 확인
+- 플롯/테이블/수식 표시 확인
+- (선택) 이미지 로딩 확인
+
+---
+
+# 간단한 R 코드
+
+아래는 랜덤 샘플 데이터 요약입니다.
+
+
+``` r
+set.seed(42)
+x &lt;- rnorm(100)
+summary(x)
+```
+
+```
+##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+## -2.99309 -0.61669  0.08980  0.03251  0.66156  2.28665
+```
+
+---
+
+# 간단한 플롯
+
+
+``` r
+hist(x, main = "Histogram of x", xlab = "x")
+```
+
+![](test_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+
+---
+
+# 테이블 출력
+
+
+``` r
+df &lt;- data.frame(
+  id = 1:5,
+  value = round(rnorm(5), 3)
+)
+knitr::kable(df)
+```
+
+
+
+| id|  value|
+|--:|------:|
+|  1|  1.201|
+|  2|  1.045|
+|  3| -1.003|
+|  4|  1.848|
+|  5| -0.667|
+
+---
+
+# 수식
+
+인라인 수식 예: `\(\mu\)`, `\(\sigma\)`  
+
+블록 수식 예:
+
+$$
+\hat{\mu} = \frac{1}{n}\sum_{i=1}^n x_i
+$$
+
+---
+
+# 점진적(Incremental) 리스트
+
+- 항목 1
+- 항목 2
+- 항목 3
+
+---
+
+# 두 컬럼 레이아웃 예시
+
+.pull-left[
+## Left
+- 요약
+- 핵심 포인트
+- 실험 조건
+]
+
+.pull-right[
+## Right
+- 결과
+- 해석
+- 다음 단계
+]
+
+---
+
+# 이미지 테스트(옵션)
+
+아래 경로에 이미지를 하나 넣어보세요:
+
+- `assets/img/sample.png`
+
+파일이 없으면 메시지만 출력되고 에러는 나지 않습니다.
+
+
+```
+## No image found at:  assets/img/sample.png 
+## (Place a PNG there to test image rendering.)
+```
+
+---
+
+# 작업 팁
+
+- 라이브 프리뷰:
+```r
+xaringan::inf_mr("slides.Rmd")
+```
+
+- 단순 빌드:
+```r
+rmarkdown::render("slides.Rmd")
+```
+
+---
+
+class: center, middle
+
+# 끝
+    </textarea>
+  <style data-target="print-only">
+    @media screen {
+      .remark-slide-container {
+        display: block;
+      }
+
+      .remark-slide-scaler {
+        box-shadow: none;
+      }
+    }
+  </style>
+  <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+  <script>var slideshow = remark.create({
+      "ratio": "16:9",
+      "highlightStyle": "github",
+      "highlightLines": true,
+      "countIncrementalSlides": false
+    });
+    if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+      window.dispatchEvent(new Event('resize'));
+    });
+    (function (d) {
+      var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+      if (!r) return;
+      s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height + "; }";
+      d.head.appendChild(s);
+    })(document);
+
+    (function (d) {
+      var el = d.getElementsByClassName("remark-slides-area");
+      if (!el) return;
+      var slide, slides = slideshow.getSlides(), els = el[0].children;
+      for (var i = 1; i < slides.length; i++) {
+        slide = slides[i];
+        if (slide.properties.continued === "true" || slide.properties.count === "false") {
+          els[i - 1].className += ' has-continuation';
+        }
+      }
+      var s = d.createElement("style");
+      s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+      d.head.appendChild(s);
+    })(document);
+    // delete the temporary CSS (for displaying all slides initially) when the user
+    // starts to view slides
+    (function () {
+      var deleted = false;
+      slideshow.on('beforeShowSlide', function (slide) {
+        if (deleted) return;
+        var sheets = document.styleSheets, node;
+        for (var i = 0; i < sheets.length; i++) {
+          node = sheets[i].ownerNode;
+          if (node.dataset["target"] !== "print-only") continue;
+          node.parentNode.removeChild(node);
+        }
+        deleted = true;
+      });
+    })();
+    // add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+    // screen reader (see PR #262)
+    (function (d) {
+      let res = {};
+      d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+        const t = tr.querySelector('td:nth-child(2)').innerText;
+        tr.querySelectorAll('td:first-child .key').forEach(key => {
+          const k = key.innerText;
+          if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+        });
+      });
+      d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+    })(document);
+    (function () {
+      "use strict"
+      // Replace <script> tags in slides area to make them executable
+      var scripts = document.querySelectorAll(
+        '.remark-slides-area .remark-slide-container script'
+      );
+      if (!scripts.length) return;
+      for (var i = 0; i < scripts.length; i++) {
+        var s = document.createElement('script');
+        var code = document.createTextNode(scripts[i].textContent);
+        s.appendChild(code);
+        var scriptAttrs = scripts[i].attributes;
+        for (var j = 0; j < scriptAttrs.length; j++) {
+          s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+        }
+        scripts[i].parentElement.replaceChild(s, scripts[i]);
+      }
+    })();
+    (function () {
+      var links = document.getElementsByTagName('a');
+      for (var i = 0; i < links.length; i++) {
+        if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+          links[i].target = '_blank';
+        }
+      }
+    })();
+    // adds .remark-code-has-line-highlighted class to <pre> parent elements
+    // of code chunks containing highlighted lines with class .remark-code-line-highlighted
+    (function (d) {
+      const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+      const preParents = [];
+      const findPreParent = function (line, p = 0) {
+        if (p > 1) return null; // traverse up no further than grandparent
+        const el = line.parentElement;
+        return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+      };
+
+      for (let line of hlines) {
+        let pre = findPreParent(line);
+        if (pre && !preParents.includes(pre)) preParents.push(pre);
+      }
+      preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+    })(document);</script>
+
+  <script>
+    slideshow._releaseMath = function (el) {
+      var i, text, code, codes = el.getElementsByTagName('code');
+      for (i = 0; i < codes.length;) {
+        code = codes[i];
+        if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+          text = code.textContent;
+          if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+            /^\$\$(.|\s)+\$\$$/.test(text) ||
+            /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+            code.outerHTML = code.innerHTML;  // remove <code></code>
+            continue;
+          }
+        }
+        i++;
+      }
+    };
+    slideshow._releaseMath(document);
+  </script>
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+      if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+        script.src = script.src.replace(/^https?:/, '');
+      document.getElementsByTagName('head')[0].appendChild(script);
+    })();
+  </script>
+</body>
+
+</html>
