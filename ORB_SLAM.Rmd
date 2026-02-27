@@ -59,12 +59,22 @@ h1, h2, h3 {
 
 ---
 
-# 목표
-
-- R Markdown → HTML 슬라이드 생성 확인
-- 코드 청크 렌더 확인
-- 플롯/테이블/수식 표시 확인
-- (선택) 이미지 로딩 확인
+# Introduction
+## monocular SLAM system from PTAM
+- PTAM은 monocular SLAM 시스템의 대표적인 예시로, ORB-SLAM의 기반이 되는 시스템
+- PTAM의 특징
+  1. Use of the same features for all tasks 
+  <!--tracking, mapping, and loop closing -->
+  2. Real time operation in large environments
+  <!-- covisibility graph 사용으로 global map 크기에 독립적인 local covisible area에 집중 -->
+  3. Real time loop closing based on the optimization of a pose graph(Essential Graph)
+  <!-- Spanning tree(모든 keyframe node를 포함하면서 최소한의 edge를 가지는 그래프의 부분집합), loop closure links, covisbility graph(100개 이상 점을 공유하는 edge만 고른) -->
+  4. Real time camera relocalization with significant invariance to viewpoint and illumination
+  <!-- DBoW2 기반 장소 인식 모듈 활용해 카메라 추적 실패시 현재 위치 복구하거나 다시 방문시 맵 재활용 -->
+  5. A new automatic and robust initialization procedure based on model selection
+  <!-- planar, non-planar에 따라 homography, fundamental matrix 선택 -->
+  6. A survival of the fittest approach to map point and keyframe selection
+  <!-- 중복되거나 품질이 낮은 map point와 keyframe을 제거하여 최적화 수행 -->
 
 ---
 
