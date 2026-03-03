@@ -1,8 +1,40 @@
 .remark-slide-content {
-  font-size: 20px;  
-  line-height: 1.25;
+  font-size: 12px; 
+  line-height: 1.4;
+  padding: 1em 2em 1em 2em;
+
+  /* overflow-y: auto; */ 
 }
 
-.remark-slide-content h1 { font-size: 1.9em; }
-.remark-slide-content h2 { font-size: 1.5em; }
-.remark-slide-content h3 { font-size: 1.2em; }
+.remark-slide-content h1 { 
+  font-size: 1.6em; 
+  margin-top: 0; 
+  margin-bottom: 0.3em; /* 제목 아래 여백 줄이기 */
+}
+.remark-slide-content h2 { 
+  font-size: 1.0em; 
+  margin-top: 0.5em; 
+  margin-bottom: 0.2em; 
+}
+.remark-slide-content h3 { 
+  font-size: 1.0em; 
+}
+.remark-slide-content ul {
+  font-size: 0.9em;
+  line-height: 1.4;  
+  margin-bottom: 0.2em; /* 항목 간의 간격 */
+}
+.remark-slide-content ol {
+  font-size: 0.9em;
+  line-height: 1.4;  
+  margin-bottom: 0.2em; /* 항목 간의 간격 */
+}
+
+
+ul, ol {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+li {
+  margin-bottom: 0.2em;
+}
