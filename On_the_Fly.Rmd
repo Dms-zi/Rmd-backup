@@ -1,4 +1,20 @@
 ---
+title: "On-the-fly Reconstruction for Large-Scale <br>Novel View Synthesis from Unposed Images"
+subtitle: "SIGGRAPH 2025"
+author: |
+  <div style="display: inline-block; text-align: left; font-size: 1.1em; line-height: 1.4;">
+    <span class="author-line">ANDREAS MEULEMAN, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d'Azur, France</span></span><br>
+    <span class="author-line">ISHAAN SHAH, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d'Azur, France</span></span><br>
+    <span class="author-line">ALEXANDRE LANVIN, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d'Azur, France</span></span><br>
+    <span class="author-line">BERNHARD KERBL, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">TU Wien, Austria</span></span><br>
+    <span class="author-line">GEORGE DRETTAKIS, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d'Azur, France</span></span>
+  </div>
+  <div class="small" style="margin-top: 1.5em; font-size: 0.8em;">
+    ACM Transactions on Graphics (TOG), 2025<br>
+    <a href="https://github.com/graphdeco-inria/on-the-fly-nvs" style="color: inherit;">graphdeco-inria/on-the-fly-nvs</a>
+  </div>
+date: 2026.03.05
+
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -9,28 +25,6 @@ output:
       highlightLines: true
       countIncrementalSlides: false
       scale: true
----
-class: center, middle, inverse, title-slide
-
-.title[
-# On-the-fly Reconstruction for Large-Scale Novel View Synthesis from Unposed Images
-]
-
-ANDREAS MEULEMAN, ISHAAN SHAH, ALEXANDRE LANVIN,<br>
-BERNHARD KERBL, GEORGE DRETTAKIS
-
-.small[
-ACM Transactions on Graphics (TOG), 2025  
-[graphdeco-inria/on-the-fly-nvs](https://github.com/graphdeco-inria/on-the-fly-nvs)
-]
-
-.author[
-### Eunji Lee
-]
-
-.date[
-### `r format(Sys.Date(), '%Y-%m-%d')`
-]
 ---
 
 # Table of Contents
@@ -64,8 +58,12 @@ ACM Transactions on Graphics (TOG), 2025
 - **On-the-fly 3D reconstruction**: scene-ready에 pose와 radiance field 제공
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 1. Our method performs on-the-fly reconstruction from an unposed, ordered image sequence.]
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig1.png" style="width: 70%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 1. Our method performs on-the-fly reconstruction from an unposed, ordered image sequence.</div>
+</div>
+
+
 
 ---
 
@@ -88,9 +86,10 @@ ACM Transactions on Graphics (TOG), 2025
   - Active set을 오프로드해 anchors에 저장, k-NN 병합으로 LOD 관리 → 대규모 장면 처리
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 2. Overview of our method]
-
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig2.png" style="width: 70%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 2. Overview of our method</div>
+</div>
 ---
 
 # Method: Lightweight Initial Pose Estimation (1/2)
@@ -159,10 +158,6 @@ ACM Transactions on Graphics (TOG), 2025
 2. **Rendering된 이미지로부터 penalty 계산**
 3. **최종 sampling 확률 계산**
 
-<!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig: Process of calculating sampling probability (Images from media)]
-
 ---
 
 # Method: Sampling Gaussian Primitives (3/4)
@@ -177,10 +172,6 @@ ACM Transactions on Graphics (TOG), 2025
 
 - 픽셀 공간에서 기대 nearest-neighbor 거리 (2D Poisson 가정)
 - 픽셀으로부터 3D scale 변환
-
-<!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig: Depth estimation and Scale initialization]
 
 ---
 
@@ -198,8 +189,10 @@ ACM Transactions on Graphics (TOG), 2025
 - 초기 sampling으로 densification 반복이 감소하고, 최적화 속도 개선됨
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 5. Direct sampling to place new primitives during joint optimization]
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig5.png" style="width: 70%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 5. Direct sampling to place new primitives during joint optimization</div>
+</div>
 
 ---
 
@@ -230,7 +223,7 @@ ACM Transactions on Graphics (TOG), 2025
 # Method: Joint Pose and Gaussian Optimization and Scheduling (2/2)
 
 ## 단계 개요
-*사전에 새 프레임에 대한 초기 pose가 추정되어있고, sampling으로 Gaussian 위치와 크기를 확보했다고 가정*
+&rarr;*사전에 새 프레임에 대한 초기 pose가 추정되어있고, sampling으로 Gaussian 위치와 크기를 확보했다고 가정*
 
 1. **Keyframe 결정**
    - 각 Keyframe마다 최적화 scheduling 수행
@@ -243,7 +236,7 @@ ACM Transactions on Graphics (TOG), 2025
 4. **Primitive 정리**
    - Densification 수행 대신 opacity culling으로 기여도가 매우 낮은 Gaussian 삭제
 
-*Joint optimization을 통해 pose와 3DGS 표현이 정제 되어 이후 anchor 기반 대규모 처리에 사용*
+&rarr;*Joint optimization을 통해 pose와 3DGS 표현이 정제 되어 이후 anchor 기반 대규모 처리에 사용*
 
 ---
 
@@ -312,12 +305,16 @@ ACM Transactions on Graphics (TOG), 2025
 - 대부분 데이터셋에서 화질 확보 및 on‑the‑fly 처리시간 우위
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 1. Reconstruction time and novel view quality results for different methods.]
+<div style="text-align: center; margin-top: 20px;">
+ <div class="caption" style="margin-top: 10px;">Table 1. Reconstruction time and novel view quality results for different methods.</div>
+  <img src="img/onthefly/table1.png" style="width: 70%;" />
+</div>
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 7. Qualitative comparison for the three datasets used, for Taming 3DGS, Photo-Slam, MonoGS]
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig7.png" style="width: 60%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 7. Qualitative comparison for the three datasets used, for Taming 3DGS, Photo-Slam, MonoGS</div>
+</div>
 
 ---
 
@@ -328,12 +325,16 @@ ACM Transactions on Graphics (TOG), 2025
 - 저해상도 전용 기법의 강점 존재, 우리 방법은 고해상도 입력에서 설계된 강점 유지
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 2. Novel view quality results for different methods that require low-resolution input.]
+<div style="text-align: center; margin-top: 20px;">
+ <div class="caption" style="margin-top: 10px;">Table 2. Novel view quality results for different methods that require low-resolution input.</div>
+  <img src="img/onthefly/table2.png" style="width: 70%;" />
+</div>
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 8. Qualitative comparison of pose-free methods for the three datasets used, for CF-3DGS and DROID-Splat that only handle low resolution]
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig8.png" style="width: 50%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 8. Qualitative comparison of pose-free methods for the three datasets used, for CF-3DGS and DROID-Splat that only handle low resolution</div>
+</div>
 
 ---
 
@@ -344,12 +345,16 @@ ACM Transactions on Graphics (TOG), 2025
 - 대규모에서 처리시간 우위 (예: CityWalk --- Ours ≈ 25 min vs H3DGS ≈ 22 hrs) 및 전반적 실용성 우위
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 9. Qualitative comparison of large-scale methods for the three datasets used.]
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig9.png" style="width: 30%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 9. Qualitative comparison of large-scale methods for the three datasets used.</div>
+</div>
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 4. Results for large scale scenes]
+<div style="text-align: center; margin-top: 20px;">
+ <div class="caption" style="margin-top: 10px;">Table 4. Results for large scale scenes.</div>
+  <img src="img/onthefly/table4.png" style="width: 70%;" />
+</div>
 
 ---
 
@@ -364,12 +369,20 @@ ACM Transactions on Graphics (TOG), 2025
 - Joint optimization이 가장 오래 소요되는 단계, mini‑BA 및 bootstrapping은 CUDA graphs로 고속화
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 6. Per keyframe runtime breakdown]
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+  
+  <div style="text-align: center; width: 50%;">
+    <div class="caption" style="margin-bottom: 10px;">Table 5. Pose estimation results for different methods using absolute and relative error metrics.</div>
+    <img src="img/onthefly/table5.png" style="width: 100%;" />
+  </div>
 
-<!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 5. Pose estimation results for different methods using absolute and relative error metrics]
+  <div style="text-align: center; width: 40%;">
+    <div class="caption" style="margin-bottom: 10px;">Table 6. Per keyframe runtime breakdown.</div>
+    <img src="img/onthefly/table6.png" style="width: 100%;" />
+  </div>
+
+</div>
+
 
 ---
 
@@ -380,16 +393,26 @@ ACM Transactions on Graphics (TOG), 2025
 - Expectancy‑based scale 초기화의 중요성(가장 큰 영향), sampling 기여 향상, uniform 슬라이드 시 primitives 수 증가
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 11. Qualitative evaluation of the various components via ablation studies on Garden.]
+<div style="text-align: center; margin-top: 20px;">
+ <div class="caption" style="margin-top: 10px;">Table 8. Ablation results.</div>
+  <img src="img/onthefly/table8.png" style="width: 40%;" />
+</div>
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 10. Qualitative evaluation of the various components via ablation studies on Forest2]
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+  
+  <div style="text-align: center; width: 50%;">
+    <img src="img/onthefly/fig10.png" style="width: 100%;" />
+    <div class="caption" style="margin-bottom: 10px;">Fig. 10. Qualitative evaluation of the various components via ablation studies on Forest2.</div>
+  </div>
 
-<!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 8. Ablation results]
+  <div style="text-align: center; width: 40%;">
+    <img src="img/onthefly/fig11.png" style="width: 100%;" />
+    <div class="caption" style="margin-bottom: 10px;">Fig. 11. Qualitative evaluation of the various components via ablation studies on Garden.</div>
+  </div>
+
+</div>
+
 
 ---
 
@@ -400,12 +423,16 @@ ACM Transactions on Graphics (TOG), 2025
 - Anchors 사용으로 peak Gaussians 수 감소 및 품질 소폭 개선, 대규모 장면에서 GPU 메모리 안정화 효과
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Table 7. Impact of the anchors on Forest2]
+<div style="text-align: center; margin-top: 20px;">
+ <div class="caption" style="margin-top: 10px;">Table 7. Impact of the anchors on Forest2.</div>
+  <img src="img/onthefly/table7.png" style="width: 50%;" />
+</div>
 
 <!-- Image/Table Placeholder -->
-<br><br><br>
-.caption[Fig. 2. Overview of our method]
+<div style="text-align: center; margin-top: 20px;">
+  <img src="img/onthefly/fig2_anchor.png" style="width: 80%;" />
+  <div class="caption" style="margin-top: 10px;">Fig. 2. Overview of our method</div>
+</div>
 
 ---
 
