@@ -1,58 +1,53 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>ORB SLAM: a Versatile and Accurate Monocular SLAM System</title>
+    <title>PTAM &amp; ORB SLAM</title>
     <meta charset="utf-8" />
-    <meta name="author" content="Eunji Lee" />
-    <meta name="date" content="2026-03-03" />
     <script src="libs/header-attrs-2.30/header-attrs.js"></script>
     <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
     <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/swan.css" type="text/css" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/swan-fonts.css" type="text/css" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/swan-all-fonts.css" type="text/css" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/tachyons_ext.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
 .title[
-# ORB SLAM: a Versatile and Accurate Monocular SLAM System
+# PTAM &amp; ORB SLAM
 ]
 .subtitle[
-## 2026-1
+## Eunji Lee
 ]
 .author[
-### Eunji Lee
+### <div style="display: inline-block; text-align: left; font-size: 1.1em; line-height: 1.4;">
+<p><span class="author-line">ANDREAS MEULEMAN, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d’Azur, France</span></span><br>
+<span class="author-line">ISHAAN SHAH, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d’Azur, France</span></span><br>
+<span class="author-line">ALEXANDRE LANVIN, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d’Azur, France</span></span><br>
+<span class="author-line">BERNHARD KERBL, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">TU Wien, Austria</span></span><br>
+<span class="author-line">GEORGE DRETTAKIS, <span class="affiliation" style="font-size: 0.85em; opacity: 0.9;">Inria, Université Côte d’Azur, France</span></span></p>
+</div>
 ]
 .date[
-### 2026-03-03
+### 2026.03.10
 ]
 
 ---
 
 
-&lt;style&gt;
-.remark-slide-content {
-  font-size: 24px;
-}
-h1, h2, h3 {
-  letter-spacing: 0.3px;
-}
-.small {
-  font-size: 18px;
-  opacity: 0.85;
-}
-.muted {
-  opacity: 0.7;
-}
-&lt;/style&gt;
 # Table of Contents
+.pull-left.content-list[
 1. Introduction
-2. System Overview
-3. Automatic Map Initialization
-4. Tracking
-5. Local Mapping
-6. Loop Closing
-7. Experiments
-8. Conclusion
+1. PTAM
+1. System Overview
+1. Tracking
+1. Local Mapping
+1. Experiments
+1. Conclusion
+]
+
 ---
 # Introduction
 ## Bundle Adjustment (BA)
@@ -71,10 +66,70 @@ h1, h2, h3 {
   &lt;!-- 실시간 어플레키에션 실현 위해 BA는 탐색에서 지역 맵에 대해서만 수행하여 확장성 달성 --&gt;
   6. The ability to perform fast global optimizations for loop closing
   &lt;!-- pose graph와 fast global optimization을 통해 루프 클로징 시 빠른 전역 최적화 수행 --&gt;
+---
+class: inverse, middle, center, title-slide
+# PTAM
+### ISMAR, 2007
+### Georg Klein*,  David Murray†
+Active Vision Laboratory*,
+Department of Engineering Science
+University of Oxford†
+---
+# Introduction
+- 소규모 AR작업 공간에서 휴대용 카메라를 추적하도록 설계된 시스템 제안
+![]()
+---
+## Method overview in the context of SLAM
+
+- Tracking과 Mapping을 두 개의 병렬 스레드로 분리 실행
+
+- Keyframe 기반 Mapping, Bundle Adjustment
+
+- Stereo pair(5-point algorithm)으로부터 dense하게 초기화
+- Epipolar search로 새로운 점 초기화
 
 ---
+## The Map
+- Textured Patch 
+    - 각 특징점이 8x8 픽셀크기의 Locally Planar라고 가정
+    - Unit Path Normal(`\(n_j\)`) : 패치의 normal vector
+    - Source Keyframe(`\(N\)`) : 패치를 가져온 원본 영상
+    - Pyramid level
+`$${}^W\boldsymbol{p}_j = ({}^Wx_j,{}^Wy_j, {}^Wz_j,1 )^\top \\{}^{K_i}\boldsymbol{E}_{W}$$`
+- Image Pyramid
+    - Keyframe을 4레벨의 greyscale 8bpp 이미지 피라미드로 저장
+    - level 0 (640x480) &amp;rarr; level3 (80x60)
+???
+카메라가 움직이면 각도에 따라 모습이 달라보이는데 법선 벡터를 알면 패치가 어떻게 warping될지 예측 가능
+현재 카메라 영상과 matching해 tracking
+i번째 키프레임에 대한 Ki 카메라 중심좌표계
+bits per pixel
+---
+## coarse-to-fine Tracking
+1. motion model로부터 이전 pose 추정치 생성 후 projection
+1. coarsest-scale에서 50개 특징점 검색
+1. coase matches에 대한 pose update
+1. 최적 레벨(`\(l\)`) 선택해 1000개의 점이 reprojection되어 이미지에서 검색됨
+1. frame에 대한 최종 pose estimation
 
-# Introduction
+### Image acquisition
+- Unibrain Fire-i video camera equipped
+with a 2.1mm wide-angle lens
+- 640 x 480 pixel YUV411 frames at 30Hz
+- Prior pose estimation &amp;rarr; Decaying velocity model (`\(v_t = \alpha \cdot v_{t-1}\)`)
+- 각 피라미드 레벨에서 FAST-10 코너 검출기 실행
+???
+constant velocity랑 다른점은 측정 데이터가 들어오지 않으면 카메라 속도가 점점 줄어들고 멈춤
+코너 검출은 비최대 억제없이 수행, 덩어리같은 코너 영역 클러스터 생성 
+---
+### Camera pose and projection
+
+`$$\begin{align}
+{}^C\boldsymbol{p}_{j} = {}^C\boldsymbol{E}_{W}{}^W\boldsymbol{p}_{j}
+\end{align}$$`
+???
+E는 4x4 SE(3)
+---
 ## monocular SLAM system from PTAM
 - PTAM은 monocular SLAM 시스템의 대표적인 예시로, ORB-SLAM의 기반이 되는 시스템
 - PTAM의 특징
@@ -92,22 +147,13 @@ h1, h2, h3 {
   &lt;!-- 중복되거나 품질이 낮은 map point와 keyframe을 제거하여 최적화 수행 --&gt;
 
 ---
-
-# 간단한 R 코드
-
-아래는 랜덤 샘플 데이터 요약입니다.
-
-
-``` r
-set.seed(42)
-x &lt;- rnorm(100)
-summary(x)
-```
-
-```
-##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-## -2.99309 -0.61669  0.08980  0.03251  0.66156  2.28665
-```
+class: inverse, middle, center, title-slide
+# ORB SLAM: a Versatile and Accurate Monocular SLAM System
+## IEEE Transactions on Robotics. 2015
+&lt;div class="small" style="margin-top: 1.5em; font-size: 0.8em;"&gt;
+    &lt;a href="https://github.com/raulmur/ORB_SLAM" style="color: inherit;"&gt;https://github.com/raulmur/ORB_SLAM&lt;/a&gt;
+  &lt;/div&gt;
+---
 
 ---
 
@@ -118,7 +164,7 @@ summary(x)
 hist(x, main = "Histogram of x", xlab = "x")
 ```
 
-![](ORB_SLAM_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+![](ORB_SLAM_files/figure-html/unnamed-chunk-1-1.png)&lt;!-- --&gt;
 
 ---
 
@@ -137,11 +183,11 @@ knitr::kable(df)
 
 | id|  value|
 |--:|------:|
-|  1|  1.201|
-|  2|  1.045|
-|  3| -1.003|
-|  4|  1.848|
-|  5| -0.667|
+|  1| -0.151|
+|  2| -1.449|
+|  3|  0.643|
+|  4|  0.483|
+|  5| -0.006|
 
 ---
 
@@ -219,11 +265,13 @@ class: center, middle
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="Xaringan_Example/swan/macros.js"></script>
 <script>var slideshow = remark.create({
   "ratio": "16:9",
   "highlightStyle": "github",
   "highlightLines": true,
-  "countIncrementalSlides": false
+  "countIncrementalSlides": false,
+  "scale": true
 });
 if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
   window.dispatchEvent(new Event('resize'));
