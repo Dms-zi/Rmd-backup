@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Multimodal Sensor Fusion SLAM</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="" />
+    <script src="libs/header-attrs-2.30/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/swan.css" type="text/css" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/swan-fonts.css" type="text/css" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/swan-all-fonts.css" type="text/css" />
+    <link rel="stylesheet" href="Xaringan_Example/swan/tachyons_ext.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Multimodal Sensor Fusion SLAM
+]
+.subtitle[
+## Eunji Lee
+]
+.author[
+### 
+]
+.date[
+### 2026.03.12
+]
+
+---
+
+# Tracking
+
+---
+## Motion Model
+.f-90[
+- Constant velocity `\(V_t = V_{t-1}\)`
+
+``` cpp
+    SE3 w_T_c_last = mLastFrame-&gt;GetPose();
+    SE3 w_T_c_curr = mCurrentFrame-&gt;GetPose();
+    mVelocity = w_T_c_last.inverse() * w_T_c_curr;  
+  return mLastFrame-&gt;GetPose() * mVelocity;
+```
+- Damped velocity  `\(V_t = \lambda \cdot V_{t-1}\)`
+
+``` cpp
+  double lambda = 0.5; // Damping factor (0.5 means half velocity)
+  Eigen::Vector3d t = mVelocity.translation() * lambda;
+  Eigen::Quaterniond q(mVelocity.rotation());
+  Eigen::Quaterniond q_damped = Eigen::Quaterniond::Identity().slerp(lambda, q);
+  SE3 damped_velocity = SE3::Identity();
+  damped_velocity.linear() = q_damped.toRotationMatrix();
+  damped_velocity.translation() = t;
+  return mLastFrame-&gt;GetPose() * damped_velocity;
+```
+]
+---
+## Brute-force radius or Grid-based search
+.f-90.nt-02[
+- Radius-based Brute-force search
+    - 예측된 투영 위치 (u,v) 중심으로 일정 픽셀 반지름 내에 있는 모든 특징점 검사해 거리 계산
+
+``` cpp
+for (size_t i = 0; i &lt; kpts_curr.size(); ++i) {
+    float dx = kpts_curr[i].pt.x - u;
+    float dy = kpts_curr[i].pt.y - v;
+    if (dx * dx + dy * dy &lt; radius * radius) {
+        // Descriptor matching... }.....}
+```
+- Grid-based search
+    - 1440x1080을 72x54 그리드로 나누고, 각 점이 속한 셀에 인덱스 저장해 특정 셀만 조회
+
+``` cpp
+std::vector&lt;size_t&gt; vIndices = mCurrentFrame-&gt;GetFeaturesInArea(u, v, radius);
+for (size_t i : vIndices) {
+    const auto &amp;kp = kpts_curr[i];
+    double dx = kp.pt.x - u;
+    double dy = kp.pt.y - v;
+    if (dx * dx + dy * dy &lt; radius * radius) {
+        // Descriptor matching...
+```
+]
+---
+## 속도 비교
+- 200 frame
+
+| | Total Time (ms) | Avg Frame Time (ms) | Avf KF Interval (ms)| Motion model Lost Count |
+|:---|:---|:---|:---|:---|
+|ConstVelo &amp; BF radius| 5993.54 | 31.7118 | 338.181 | 26 |
+|ConstVelo &amp; Grid | 9333.19 | 49.382 | 531.61 | 60|
+|DampedVelo &amp; Grid | 10531.4 | 55.7219 | 600.278 | 85|
+
+- 왜 그럴까..
+    - oxford spires dataset이 거의 1초에 1m 가는 handheld여서 constant velocity가 더 잘 맞는 것 같다
+    - Grid 탐색하면 `\(O(1)\)`이고, feature 몇백개 탐색하는 비용에 비해 셀 할당 비용이 더 손해 인 것 같다 
+  
+---
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="Xaringan_Example/swan/macros.js"></script>
+<script>var slideshow = remark.create({
+  "ratio": "16:9",
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "scale": true
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -118,11 +118,26 @@ constant velocity랑 다른점은 측정 데이터가 들어오지 않으면 카
 ---
 ### Camera pose and projection
 
-$$\begin{align}
-{}^C\boldsymbol{p}_{j} = {}^C\boldsymbol{E}_{W}{}^W\boldsymbol{p}_{j}
-\end{align}$$
+$$
+\begin{align}
+{}^{c}\boldsymbol{p}_{j} &= {}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{j} \\[6pt]
+\begin{pmatrix} u_i \\ v_i \end{pmatrix}
+&= \mathrm{CamProj}({}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{i}) \\[6pt]
+\mathrm{CamProj}
+\begin{pmatrix} x \\ y \\ z \\ 1 \end{pmatrix}
+&=
+\begin{pmatrix} u_0 \\ v_0 \end{pmatrix}
++
+\begin{bmatrix} f_u & 0 \\ 0 & f_v \end{bmatrix}
+\frac{r'}{r}
+\begin{pmatrix} \frac{x}{z} \\ \frac{y}{z} \end{pmatrix} \\[8pt]
+r &= \sqrt{\frac{x^2+y^2}{z^2}} \\[6pt]
+r' &= \frac{1}{\omega}\arctan\left(2r\tan\frac{\omega}{2}\right) \\[6pt]
+E'_{\mathrm{cw}} &= ME_{\mathrm{cw}} = \exp(\mu)E_{\mathrm{cw}}, \quad μ\in \mathbb{R}^6, \mathfrak{se}(3)
+\end{align}
+$$
 ???
-E는 4x4 SE(3)
+E는 4x4 SE(3) Transformation matrix
 ---
 ## monocular SLAM system from PTAM
 - PTAM은 monocular SLAM 시스템의 대표적인 예시로, ORB-SLAM의 기반이 되는 시스템

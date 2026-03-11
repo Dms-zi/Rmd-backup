@@ -1,0 +1,88 @@
+---
+title: "Multimodal Sensor Fusion SLAM"
+subtitle: "Eunji Lee"
+author: |
+date: 2026.03.12
+
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: 
+      - "default"
+      - "default-fonts"
+      - "Xaringan_Example/swan/swan.css"
+      - "Xaringan_Example/swan/swan-fonts.css"
+      - "Xaringan_Example/swan/swan-all-fonts.css"
+      - "Xaringan_Example/swan/tachyons_ext.css"
+    nature:
+      ratio: "16:9"
+      highlightStyle: "github"
+      highlightLines: true
+      countIncrementalSlides: false
+      beforeInit: ["Xaringan_Example/swan/macros.js"] 
+      scale: true
+---
+# Tracking
+
+---
+## Motion Model
+.f-90[
+- Constant velocity $V_t = V_{t-1}$
+```{cpp}
+    SE3 w_T_c_last = mLastFrame->GetPose();
+    SE3 w_T_c_curr = mCurrentFrame->GetPose();
+    mVelocity = w_T_c_last.inverse() * w_T_c_curr;  
+  return mLastFrame->GetPose() * mVelocity;
+```
+- Damped velocity  $V_t = \lambda \cdot V_{t-1}$
+```{cpp}
+  double lambda = 0.5; // Damping factor (0.5 means half velocity)
+  Eigen::Vector3d t = mVelocity.translation() * lambda;
+  Eigen::Quaterniond q(mVelocity.rotation());
+  Eigen::Quaterniond q_damped = Eigen::Quaterniond::Identity().slerp(lambda, q);
+  SE3 damped_velocity = SE3::Identity();
+  damped_velocity.linear() = q_damped.toRotationMatrix();
+  damped_velocity.translation() = t;
+  return mLastFrame->GetPose() * damped_velocity;
+```
+]
+---
+## Brute-force radius or Grid-based search
+.f-90.nt-02[
+- Radius-based Brute-force search
+    - 예측된 투영 위치 (u,v) 중심으로 일정 픽셀 반지름 내에 있는 모든 특징점 검사해 거리 계산
+```{cpp}
+for (size_t i = 0; i < kpts_curr.size(); ++i) {
+    float dx = kpts_curr[i].pt.x - u;
+    float dy = kpts_curr[i].pt.y - v;
+    if (dx * dx + dy * dy < radius * radius) {
+        // Descriptor matching... }.....}
+```
+- Grid-based search
+    - 1440x1080을 72x54 그리드로 나누고, 각 점이 속한 셀에 인덱스 저장해 특정 셀만 조회
+```{cpp}
+std::vector<size_t> vIndices = mCurrentFrame->GetFeaturesInArea(u, v, radius);
+for (size_t i : vIndices) {
+    const auto &kp = kpts_curr[i];
+    double dx = kp.pt.x - u;
+    double dy = kp.pt.y - v;
+    if (dx * dx + dy * dy < radius * radius) {
+        // Descriptor matching...
+```
+]
+---
+## 속도 비교
+- 200 frame
+
+| | Total Time (ms) | Avg Frame Time (ms) | Avf KF Interval (ms)| Motion model Lost Count |
+|:---|:---|:---|:---|:---|
+|ConstVelo & BF radius| 5993.54 | 31.7118 | 338.181 | 26 |
+|ConstVelo & Grid | 9333.19 | 49.382 | 531.61 | 60|
+|DampedVelo & Grid | 10531.4 | 55.7219 | 600.278 | 85|
+
+- 왜 그럴까..
+    - oxford spires dataset이 거의 1초에 1m 가는 handheld여서 constant velocity가 더 잘 맞는 것 같다
+    - Grid 탐색하면 $O(1)$이고, feature 몇백개 탐색하는 비용에 비해 셀 할당 비용이 더 손해 인 것 같다 
+  
+---
+
