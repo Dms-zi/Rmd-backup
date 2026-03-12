@@ -22,8 +22,119 @@ output:
       beforeInit: ["Xaringan_Example/swan/macros.js"] 
       scale: true
 ---
-# Tracking
+# IOUtils
+|.center[IOUtils]|
+|:---|
+||
+|+void .red[create_directory](.green[const] .blue[std::string] &path)<br> +void .red[save_point_cloud] (.blue[Map::Ptr] map, .green[const] .blue[std::string] &filename) <br> +void .red[save_visualization_info](.green[const] .blue[std::string] &filename,<br>.right[.green[const] .blue[DatasetInterface] &dataset, <br>.blue[Map::Ptr] map,.blue[int] idx1, .blue[int] idx2)]|
+---
+# DatasetInterface
+|.center[DatasetInterface]|
+|:---|
+||
+|+.green[virtual] .red[~DatasetInterface]() = default<br>+.blue[cv::Mat] .red[getK]() .green[const] = 0<br>+.blue[cv::Mat] .red[getD]() .green[const] = 0<br>+.blue[size_t] .red[GetImageCount]() .green[const] = 0<br>+.blue[cv::Mat] .red[GetImage](.blue[size_t] index) .green[const] = 0<br>+.blue[std::string] .red[GetFileName](.blue[size_t] index) .green[const] = 0<br>+.blue[double] .red[getTimestamp](.blue[size_t] index) .green[const] = 0|
 
+---
+# OxfordSpires
+.f-80.nt-02[
+|.center[OxfordSpires]|
+|:---|:---|
+|-.blue[std::string] mDatasetPath<br>-.blue[cv::Mat] mK<br>-.blue[cv::Mat] mD-.blue[SE3] mB_T_C-.blue[std::map]<.blue[double], .blue[SE3]> mmGroundTruth<br>-.blue[std::vector]<.blue[std::string]> mSortedImages|+.red[OxfordSpires](.green[const] .blue[std::string]& calib_path, .green[const] .blue[std::string]& dataset_path,.right[.green[const] .blue[std::string]& gt_path, .green[const] .blue[std::string]& camera_label)]+.red[~OxfordSpires]() = default<br>+.blue[cv::Mat] .red[getK]() .green[const]<br>+.blue[cv::Mat] .red[getD]() .green[const]<br>+.blue[SE3] .red[getExtrinsics]() .green[const]<br>+.blue[cv::Mat] .red[GetImage](.blue[size_t] index) .green[const]<br>+.blue[std::string] .red[GetFileName](.blue[size_t] index) .green[const]<br>+.blue[size_t] .red[GetImageCount]() .green[const]<br>+.blue[std::string] .red[getDatasetPath]() .green[const]<br>+.blue[double] .red[getTimestamp](.blue[size_t] index) .green[const]<br>+.blue[std::optional]<.blue[SE3]> .red[GetGroundTruthPose](.blue[double] timestamp) .green[const]<br>-.blue[bool] .red[load_yaml_config](.green[const] .blue[std::string]& path, .blue[YAML::Node]& out)<br>-.blue[bool] .red[set_K_and_D](.green[const] .blue[std::string]& yaml_path, .green[const] .blue[std::string]& label)<br>-.blue[std::optional]<.blue[SE3]> .red[set_B_T_C](.green[const] .blue[std::string]& yaml_path, .green[const] .blue[std::string]& label)<br>-.blue[std::optional]<.blue[SE3]> .red[load_transform_from_7d_list](.green[const] .blue[YAML::Node]& node,<br>.right[.green[const] .blue[std::string]& key_7d, .blue[bool] invert)]-void .red[LoadSequence](.green[const] .blue[std::string]& dataset_path)<br>-.blue[bool] .red[load_tum2T_txt](.green[const] .blue[std::string]& path)|
+]
+---
+# Camera
+|.center[Camera]|
+|:---|
+|-.blue[cv::Mat] mK<br>-.blue[cv::Mat] mD<br>-.blue[double] mFx<br>-.blue[double] mFy<br>-.blue[double] mCx<br>-.blue[double] mCy|
+|+.red[Camera](.green[const] .blue[cv::Mat]& K, .green[const] .blue[cv::Mat]& D)<br>+.red[~Camera]() = default<br>+.blue[cv::Mat] .red[GetK]() .green[const]<br>+.blue[cv::Mat] .red[GetD]() .green[const]<br>+.blue[double] .red[fx]() .green[const]<br>+.blue[double] .red[fy]() .green[const]<br>+.blue[double] .red[cx]() .green[const]<br>+.blue[double] .red[cy]() .green[const]<br>+.blue[cv::Point2f] .red[Project](.green[const] .blue[Eigen::Vector3d]& p_c) .green[const]<br>+.blue[cv::Point2f] .red[Normalized](.green[const] .blue[cv::Point2f]& p_uv) .green[const]<br>+.blue[std::vector]<.blue[cv::Point2f]> .red[Normalized](.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts_uv) .green[const]|
+
+---
+# Frame
+.f-90.nt-02[
+|.center[Frame]|
+|:---|:---|
+|-.blue[size_t] mId<br>-.blue[double] mTimestamp<br>-.blue[cv::Mat] mImg<br>-.blue[Camera::Ptr] mCamera<br>-.blue[std::vector]<.blue[cv::KeyPoint]> mKeypoints<br>-.blue[cv::Mat] mDescriptors<br>-.blue[std::vector]<.blue[std::shared_ptr]<.blue[MapPoint]>> mMapPoints<br>-.blue[SE3] mw_T_c||+.red[Frame](.blue[size_t] id, .blue[double] timestamp, .green[const] .blue[cv::Mat]& img, .green[const] .blue[Camera::Ptr]& camera)<br>+.red[~Frame]() = default<br>+void .red[SetKeyPoints](.green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts)<br>+void .red[SetDescriptors](.green[const] .blue[cv::Mat]& descs)<br>+void .red[SetPose](.green[const] .blue[SE3]& w_T_c)<br>+.blue[size_t] .red[GetId]() .green[const]<br>+.blue[double] .red[GetTimestamp]() .green[const]<br>+.blue[cv::Mat] .red[GetImage]() .green[const]<br>+.blue[std::vector]<.blue[cv::KeyPoint]> .red[GetKeyPoints]() .green[const]<br>+.blue[cv::Mat] .red[GetDescriptors]() .green[const]<br>+.blue[SE3] .red[GetPose]() .green[const]<br>+.blue[Camera::Ptr] .red[GetCamera]() .green[const]<br>+.blue[cv::Mat] .red[GetK]() .green[const]<br>+.blue[cv::Mat] .red[GetD]() .green[const]<br>+.blue[std::vector]<.blue[std::shared_ptr]<.blue[MapPoint]>> .red[GetMapPoints]() .green[const]<br>+void .red[SetMapPoints](.green[const] .blue[std::vector]<.blue[std::shared_ptr]<.blue[MapPoint]>>& mps)<br>+void .red[AddMapPoint](.blue[std::shared_ptr]<.blue[MapPoint]> mp, .blue[size_t] idx)|
+]
+---
+
+# KeyFrame
+.nt-02[
+|.center[KeyFrame]|
+|:---|:---|
+|-.blue[size_t] mId<br>-.blue[double] mTimestamp<br>-.green[mutable] .blue[std::mutex] mMutexPose<br>-.blue[SE3] mw_T_c<br>-.blue[Camera::Ptr] mCamera<br>-.blue[std::vector]<.blue[cv::KeyPoint]> mKeypoints<br>-.blue[std::vector]<.blue[std::shared_ptr]<.blue[MapPoint]>> mMapPoints<br>-.blue[cv::Mat] mDescriptors|+.red[KeyFrame](.blue[Frame::Ptr] frame)<br>+.red[~KeyFrame]() = default<br>+void .red[SetPose](.green[const] .blue[SE3]& pose)<br>+.blue[SE3] .red[GetPose]() .green[const]<br>+.blue[size_t] .red[GetId]() .green[const]<br>+.blue[double] .red[GetTimestamp]() .green[const]<br>+.blue[Camera::Ptr] .red[GetCamera]() .green[const]<br>+.blue[cv::Mat] .red[GetK]() .green[const]<br>+.blue[cv::Mat] .red[GetD]() .green[const]<br>+.blue[std::vector]<.blue[cv::KeyPoint]> .red[GetKeyPoints]() .green[const]<br>+.blue[std::vector]<.blue[std::shared_ptr]<.blue[MapPoint]>> .red[GetMapPoints]() .green[const]<br>+void .red[SetMapPoints](.green[const] .blue[std::vector]<.blue[std::shared_ptr]<.blue[MapPoint]>>& map_points)<br>+void .red[AddMapPoint](.blue[std::shared_ptr]<.blue[MapPoint]> mp, .blue[size_t] idx)<br>+.blue[cv::Mat] .red[GetDescriptors]() .green[const]|
+]
+---
+
+# MapPoint
+|.center[MapPoint]|
+|:---|
+|-.blue[size_t] mId<br>-.blue[Eigen::Vector3d] mPosWorld<br>-.blue[Eigen::Vector3d] mNormalVector<br>-.blue[double] mMinDistance = 0.0<br>-.blue[double] mMaxDistance = 0.0<br>-.blue[std::map]<.blue[KeyFrame::Ptr], .blue[size_t]> mObservations|
+|+.red[MapPoint](.blue[size_t] id, .green[const] .blue[Eigen::Vector3d]& pos_world)<br>+.red[~MapPoint]() = default<br>+void .red[SetPosition](.green[const] .blue[Eigen::Vector3d]& pos)<br>+.blue[Eigen::Vector3d] .red[GetPosition]() .green[const]<br>+.blue[size_t] .red[GetId]() .green[const]<br>+void .red[AddObservation](.blue[KeyFrame::Ptr] keyframe, .blue[size_t] feature_idx)<br>+.blue[std::map]<.blue[KeyFrame::Ptr], .blue[size_t]> .red[GetObservations]() .green[const]<br>+void .red[UpdateNormalAndDepth]()<br>+.blue[Eigen::Vector3d] .red[GetNormal]() .green[const]<br>+.blue[double] .red[GetMinDistanceInvariance]() .green[const]<br>+.blue[double] .red[GetMaxDistanceInvariance]() .green[const]|
+
+---
+
+# Map
+|.center[Map]|
+|:---|
+|-.blue[std::map]<.blue[size_t], .blue[KeyFrame::Ptr]> mMapKeyFrames<br>-.blue[std::map]<.blue[size_t], .blue[MapPoint::Ptr]> mMapPoints<br>-.green[mutable] .blue[std::mutex] mMapMutex|
+|+.red[Map]() = default<br>+.red[~Map]() = default<br>+void .red[AddKeyFrame](.blue[KeyFrame::Ptr] keyframe)<br>+void .red[AddMapPoint](.blue[MapPoint::Ptr] map_point)<br>+.blue[std::vector]<.blue[KeyFrame::Ptr]> .red[GetAllKeyFrames]() .green[const]<br>+.blue[std::vector]<.blue[MapPoint::Ptr]> .red[GetAllMapPoints]() .green[const]<br>+.blue[size_t] .red[GetMapPointCount]() .green[const]<br>+.blue[size_t] .red[GetKeyFrameCount]() .green[const]<br>+void .red[Clear]()|
+
+---
+
+# FeatureType
+|.center[FeatureType](enumeration)|
+|:---|
+|SIFT<br>ORB|
+||
+
+---
+
+# FeatureProcessor
+.nt-02[
+|.center[FeatureProcessor]|
+|:---|
+|-.blue[cv::Ptr]<.blue[cv::Feature2D]> mpSiftDetector<br>-.blue[cv::Ptr]<.blue[cv::Feature2D]> mpOrbDetector<br>-.blue[float] mMatchRatioThresh|
+|+.red[FeatureProcessor]()<br>+.red[~FeatureProcessor]() = default<br>+.blue[bool] .red[Extract](.green[const] .blue[cv::Mat]& img, .blue[FeatureType] type,<br>.right[.blue[std::vector]<.blue[cv::KeyPoint]>& kpts, .blue[cv::Mat]& descs)]+.blue[bool] .red[Match](.green[const] .blue[cv::Mat]& desc1, .green[const] .blue[cv::Mat]& desc2, .blue[FeatureType] type,<br>.right[.blue[std::vector]<.blue[cv::DMatch]>& matches, .blue[bool] visualize, .blue[std::string] save_path,].right[.green[const] .blue[cv::Mat]& img1, .green[const] .blue[cv::Mat]& img2,].right[.green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts1, .green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts2)]-.blue[bool] .red[extract_sift](.green[const] .blue[cv::Mat]& img, .blue[std::vector]<.blue[cv::KeyPoint]>& kpts, .blue[cv::Mat]& descs)<br>-.blue[bool] .red[extract_orb](.green[const] .blue[cv::Mat]& img, .blue[std::vector]<.blue[cv::KeyPoint]>& kpts, .blue[cv::Mat]& descs)<br>-.blue[bool] .red[match_features_robust](.green[const] .blue[cv::Mat]& desc1, .green[const] .blue[cv::Mat]& desc2,<br>.right[.blue[FeatureType] type, .blue[std::vector]<.blue[cv::DMatch]>& matches)] -void .red[visualize_matches](.green[const] .blue[cv::Mat]& img1, .green[const] .blue[cv::Mat]& img2,<br>.right[.green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts1, .green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts2,].right[.green[const] .blue[std::vector]<.blue[cv::DMatch]>& matches, .green[const] .blue[std::string]& save_path)]|
+]
+---
+
+# TwoViewReconstruction
+.nt-02[
+|.center[TwoViewReconstruction]|
+|:---|
+||
+|+.red[TwoViewReconstruction]() = default<br>+.red[~TwoViewReconstruction]() = default<br>+.blue[bool] .red[Reconstruct](.green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts1,.right[.green[const] .blue[std::vector]<.blue[cv::KeyPoint]>& kpts2,].right[.green[const] .blue[std::vector]<.blue[cv::DMatch]>& matches, .green[const] .blue[Camera::Ptr]& camera,].right[.blue[Eigen::Matrix3d]& R, .blue[Eigen::Vector3d]& t,].right[.blue[std::vector]<.blue[cv::Point2f]>& pts1_norm_out, .blue[std::vector]<.blue[cv::Point2f]>& pts2_norm_out)]<br>-.blue[cv::Mat] .red[ComputeEssentialMatrix](.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts1_norm,<br>.right[.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts2_norm, .blue[cv::Mat]& inlier_mask)]<br>-.blue[bool] .red[DecomposeAndRecover](.green[const] .blue[cv::Mat]& E,.right[.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts1_norm,].right[.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts2_norm,].right[.green[const] .blue[cv::Mat]& mask, .blue[Eigen::Matrix3d]& R, .blue[Eigen::Vector3d]& t)]|
+]
+---
+
+# Initializer
+|.center[Initializer]|
+|:---|
+|-.blue[FeatureProcessor] mFeatureProcessor<br>-.blue[TwoViewReconstruction] mReconstructor<br>-.blue[int] mInitFrameStep = 10|
+|+.red[Initializer]()<br>+.red[~Initializer]() = default<br>+.blue[bool] .red[Initialize](.green[const] .blue[DatasetInterface]& dataset, .blue[Map::Ptr] map,<br>.right[.blue[FeatureType] feature_type, .blue[bool] visualize_matches, .green[const] .blue[std::string]& output_dir)]<br>+void .red[SetInitFrameStep](.blue[int] step)|
+
+---
+
+# System
+|.center[System]|
+|:---|
+|-.blue[std::string] mCalibPath<br>-.blue[std::string] mDatasetPath<br>-.blue[std::string] mGtPath<br>-.blue[std::string] mCameraLabel<br>-.blue[std::shared_ptr]<.blue[OxfordSpires]> mDataset<br>-.blue[std::shared_ptr]<.blue[Map]> mMap<br>-.blue[std::unique_ptr]<.blue[Initializer]> mInitializer<br>-.blue[std::unique_ptr]<.blue[Tracking]> mTracking<br>-.blue[std::unique_ptr]<.blue[FeatureProcessor]> mFeatureProcessor|
+|+.red[System](.green[const] .blue[std::string]& calib_path, .green[const] .blue[std::string]& dataset_path,<br>.right[.green[const] .blue[std::string]& gt_path, .green[const] .blue[std::string]& camera_label)]<br>+.red[~System]() = default<br>+void .red[Run]()<br>-void .red[InitializeTracking]()|
+
+---
+
+# GeometryUtils
+|.center[GeometryUtils]|
+|:---|
+||
+|+.blue[std::vector]<.blue[Eigen::Vector3d]> .red[Triangulate](.green[const] .blue[Eigen::Isometry3d]& w_T_c1,<br>.right[.green[const] .blue[Eigen::Isometry3d]& w_T_c2,].right[.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts1_norm,].right[.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts2_norm)]<br>+.blue[bool] .red[CheckCheirality](.green[const] .blue[Eigen::Vector3d]& p_w,<br>.right[.green[const] .blue[Eigen::Isometry3d]& c1_T_w, .green[const] .blue[Eigen::Isometry3d]& c2_T_w)]<br>+.blue[double] .red[ComputeParallax](.green[const] .blue[Eigen::Vector3d]& p_w,<br>.right[.green[const] .blue[Eigen::Vector3d]& c1_pos, .green[const] .blue[Eigen::Vector3d]& c2_pos)]<br>+.blue[double] .red[ComputeMedianParallax](.blue[std::vector]<.blue[double]>& angles)<br>+void .red[NormalizePoints](.green[const] .blue[std::vector]<.blue[cv::Point2f]>& pts_pixel,<br>.right[.blue[std::vector]<.blue[cv::Point2f]>& pts_norm, .green[const] .blue[cv::Mat]& K, .green[const] .blue[cv::Mat]& D)]|
+
+---
+# Tracking
+.f-90.nt-02[|.center[Tracking]|
+|:---|:---|
+|-.blue[Map::Ptr] mMap<br>-.blue[Frame::Ptr] mCurrentFrame<br>-.blue[Frame::Ptr] mLastFrame<br>-.blue[KeyFrame::Ptr] mLastKeyFrame<br>-.blue[SE3] mVelocity<br>-.blue[std::shared_ptr]<.blue[FeatureProcessor]> mFeatureProcessor<br>-.blue[std::vector]<.blue[double]> mFrameTimes<br>-.blue[std::vector]<.blue[double]> mKeyFrameIntervals<br>-.blue[double] mTotalTrackingTime = 0.0<br>-.blue[double] mLastKeyFrameCreationTimestamp = 0.0<br>-.blue[int] mMotionModelLostCount = 0||+.red[Tracking]()<br>+.red[~Tracking]() = default<br>+void .red[SetMap](.blue[Map::Ptr] map)<br>+void .red[SetFeatureProcessor](.blue[std::shared_ptr]<.blue[FeatureProcessor]> feature_processor)<br>+void .red[SetLastFrame](.blue[Frame::Ptr] last_frame)<br>+.green[const] .blue[std::vector]<.blue[double]>& .red[GetFrameProcessingTimes]() .green[const]<br>+.green[const] .blue[std::vector]<.blue[double]>& .red[GetKeyFrameIntervals]() .green[const]<br>+.blue[double] .red[GetTotalTrackingTime]() .green[const]<br>+void .red[SavePerformanceData](.green[const] .blue[std::string]& filename)<br>+.blue[bool] .red[Track](.blue[Frame::Ptr] current_frame)<br>-.blue[SE3] .red[PredictPose]()<br>-.blue[bool] .red[TrackWithMotionModel]()<br>-.blue[bool] .red[TrackReferenceKeyFrame]()<br>-void .red[UpdateMotionModel]()<br>-.blue[bool] .red[NeedNewKeyFrame]()<br>-void .red[CreateNewKeyFrame]()<br>-void .red[TriangulateNewPoints](.blue[KeyFrame::Ptr] newKF)|
+]
 ---
 ## Motion Model
 .f-90[
