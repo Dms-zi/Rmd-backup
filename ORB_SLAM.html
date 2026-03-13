@@ -90,13 +90,13 @@ University of Oxford†
 
 ---
 ## The Map
-- Textured Patch 
+- Textured patch 
     - 각 특징점이 8x8 픽셀크기의 Locally Planar라고 가정
-    - Unit Path Normal(`\(n_j\)`) : 패치의 normal vector
-    - Source Keyframe(`\(N\)`) : 패치를 가져온 원본 영상
+    - Unit patch normal(`\(n_j\)`)
+    - Source keyframe(`\(N\)`)
     - Pyramid level
 `$${}^W\boldsymbol{p}_j = ({}^Wx_j,{}^Wy_j, {}^Wz_j,1 )^\top \\{}^{K_i}\boldsymbol{E}_{W}$$`
-- Image Pyramid
+- Image pyramid
     - Keyframe을 4레벨의 greyscale 8bpp 이미지 피라미드로 저장
     - level 0 (640x480) &amp;rarr; level3 (80x60)
 ???
@@ -108,7 +108,7 @@ bits per pixel
 ## coarse-to-fine Tracking
 1. motion model로부터 이전 pose 추정치 생성 후 projection
 1. coarsest-scale에서 50개 특징점 검색
-1. coase matches에 대한 pose update
+1. coarse matches에 대한 pose update
 1. 최적 레벨(`\(l\)`) 선택해 1000개의 점이 reprojection되어 이미지에서 검색됨
 1. frame에 대한 최종 pose estimation
 
@@ -144,6 +144,78 @@ E'_{\mathrm{cw}} &amp;= ME_{\mathrm{cw}} = \exp(\mu)E_{\mathrm{cw}}, \quad μ\in
 $$
 ???
 E는 4x4 SE(3) Transformation matrix
+---
+### Patch Search
+- 3d map point(`\(p\)`)가 현재 카메라 프레임의 어느 위치(`\(u_c,v_c\)`)에 있는지 찾아내는 과정
+- `\(Camproj()\)` 로 투영된 픽셀 위치 근처에서 실제 특징점 패치를 찾고 reprojection error를 구하기 위함
+1. Patch Warping (Affine Warp)
+
+.pull-left[
+`$$\mathbf{A} = \begin{bmatrix}
+    \frac{\partial u_c}{\partial u_s} &amp; \frac{\partial u_c}{\partial v_s} \\
+    \frac{\partial v_c}{\partial u_s} &amp; \frac{\partial v_c}{\partial v_s}\end{bmatrix}$$`
+    ]
+    
+.pull-right.f-90[
+- `\({u_s,v_s}\)` : source keyframe
+- `\({u_c,v_c}\)` : current keyframe
+- `\(\mathbf{A}\)` : source에서 1px 움직일때 current가 얼마나 움직이는지 Jacobian
+]
+
+&amp;rarr; Performing these projections ensures that the warping matrix compensates (to first order) not only **changes in perspective** and
+scale but also the **variations in lens distortion** across the image.
+`$$\mathbf{u}_c(\mathbf{u}_s + \Delta \mathbf{u}_s) \approx f(\mathbf{u}_s) + \frac{\partial f}{\partial \mathbf{u}_s} \Delta \mathbf{u}_s = \mathbf{u}_c + \mathbf{A} \Delta \mathbf{u}_s$$`
+???
+# Homography ??
+.nt-02[
+`$$\mathbf{x}_c \sim \mathbf{H}\mathbf{x}_s,\qquad\mathbf{x}_s=\begin{bmatrix}u_s\\v_s\\1\end{bmatrix},\quad\mathbf{x}_c=\begin{bmatrix}u_c\\v_c\\1\end{bmatrix}$$`
+`$$\mathbf{H}=\begin{bmatrix}h_{11} &amp; h_{12} &amp; h_{13}\\h_{21} &amp; h_{22} &amp; h_{23}\\h_{31} &amp; h_{32} &amp; h_{33}\end{bmatrix}, \quad \begin{bmatrix}\tilde{u}_c\\\tilde{v}_c\\\tilde{w}_c\end{bmatrix}=\mathbf{H}\begin{bmatrix}u_s\\v_s\\1\end{bmatrix}$$`
+`$$u_c=\frac{h_{11}u_s+h_{12}v_s+h_{13}}{h_{31}u_s+h_{32}v_s+h_{33}},\qquad v_c=\frac{h_{21}u_s+h_{22}v_s+h_{23}}{h_{31}u_s+h_{32}v_s+h_{33}}$$`
+`$$a=h_{11}u_s+h_{12}v_s+h_{13},\qquad b=h_{21}u_s+h_{22}v_s+h_{23},\qquad w=h_{31}u_s+h_{32}v_s+h_{33}$$`
+`$$u_c=\frac{a}{w},\qquad v_c=\frac{b}{w}$$`
+`$$\mathbf{A}=\begin{bmatrix}\frac{\partial u_c}{\partial u_s} &amp; \frac{\partial u_c}{\partial v_s}\\[4pt]\frac{\partial v_c}{\partial u_s} &amp;\frac{\partial v_c}{\partial v_s}\end{bmatrix}=\frac{1}{w}\begin{bmatrix}h_{11}-u_c h_{31} &amp; h_{12}-u_c h_{32}\\h_{21}-v_c h_{31} &amp; h_{22}-v_c h_{32}\end{bmatrix}\Bigg|_{(u_s^0,v_s^0)}$$`
+]
+---
+2. 이미지 피라미드 레벨 선택
+   - 특징점이 이미지 피라미드 레벨에서 어떤 크기로 보일지 계산
+   1. `\(det(\mathbf{A})\)` : 단위 픽셀 면적인 현재 프레임(level 0)에서 몇 픽셀 면적 차지하는지
+   2. `\(\frac{det(\mathbf{A})}{4^l}\)` : 피라미드 레벨별 면적 감소량 계산해 1에 가까운 레벨을 특징점의 source level로 선택
+3. 패치 템플릿 생성 및 매칭
+  - 특징점 찾기 위해 현재 시점에 맞게 변형된 이미지 템플릿 생성
+  1. source keyframe에 젖아된 특징점 패치를 현재 카메라 각도에 맞춰 워핑행렬 `\(\frac{A}{2^l}\)` 적용해 변형
+  2. 변형된 좌표를 정수 픽셀에 위치 시키기 위해 주변 4개 픽셀값을 가중평균 (Bilinear interpolation)
+  3. 조명 보정 위해 8x8 패치 내 모든 픽셀 평균 밝기값을 뺌 (Zero-mean)
+  4. FAST 코너 위치에 대해 SSD(Sum of Squared Differences) 계산해 차이 적고 임계값보다 낮으면 특징점이 있다고 판단 
+  `$$SSD = \Sigma(I_{template}-I_{target})^2$$`
+---
+4. Sub-pixel refinement
+  - 상위 피라미드 레벨 일부 특징점들에 우선 적용해 추적 정확도 높임
+  - Lucas-Kanade는 매 반복마다 이미지 gradient가 달라져 느림
+  - IC(Inverse Compositional)로 타겟 이미지 대신 템플릿으로 `\(H^{-1}\)` 구해 이미지 보정 값 계산
+.f-90[
+  `$$\sum_{\mathbf{x}} [T(\mathbf{W}(\mathbf{x}; \Delta \mathbf{p})) - I(\mathbf{W}(\mathbf{x}; \mathbf{p}))]^2$$`
+  `$$\Delta \mathbf{p} = H^{-1} \sum_{\mathbf{x}} \left[ \nabla T \frac{\partial \mathbf{W}}{\partial \mathbf{p}} \right]^T [I(\mathbf{W}(\mathbf{x}; \mathbf{p})) - T(\mathbf{x})]$$`
+  `$$H = \sum_{\mathbf{x}} \left[ \nabla T \frac{\partial \mathbf{W}}{\partial \mathbf{p}} \right]^T \left[ \nabla T \frac{\partial \mathbf{W}}{\partial \mathbf{p}} \right]$$`
+  `$$\mathbf{W}(\mathbf{x}; \mathbf{p}) \leftarrow \mathbf{W}(\mathbf{x}; \mathbf{p}) \circ \mathbf{W}(\mathbf{x}; \Delta \mathbf{p})^{-1}$$`
+.right.caption[S. Baker and I. Matthews, "Equivalence and efficiency of image alignment algorithms," CVPR 2001]
+]
+.f-80[
+    - `\(T(x)\)` : 템플릿 이미지 밝기
+    - `\(I(x)\)` : 현재 입력 이미지 밝기
+    - `\(\mathbf W(\mathbf x; \mathbf p)\)` : 파라미터 `\(\mathbf p\)`에 의해 정의된 좌표 변환 함수
+    - `\(\nabla T\)` : 템플릿 이미지의 밝기 변화량
+    - `\(\frac{\partial{W}}{\partial{p}}\)` : 워프함수의 자코비안
+]
+---
+### Pose Update
+- reprojection error 정의
+`$$e_j = \begin{pmatrix} \hat{u}_j \\ \hat{v}_j \end{pmatrix} - \operatorname{CamProj}\left(\exp(\mu) E_{cw} p_j\right)$$`
+- 
+Iteratively Reweighted Least Squares (IRLS)
+`$$\mu' = \underset{\mu}{\operatorname{argmin}} \sum_{j \in S} \operatorname{Obj}\left(\frac{|e_j|}{\sigma_j}, \sigma_T\right)$$`
+  - `\(\sigma_j\)` : 측정 노이즈, `\(\sigma^2 = 2^{2l}\)` 적용해 해상도 낮은 레벨에서 찾을수록 오차 허용
+  - `\(\operatorname{Obj}\left(\cdot, \sigma_T\right)\)` : Tukey biweight 손실함수
+.right.mr-20[![:scale 25%](img/ORB/tukey_loss.png)]
 ---
 ## monocular SLAM system from PTAM
 - PTAM은 monocular SLAM 시스템의 대표적인 예시로, ORB-SLAM의 기반이 되는 시스템
@@ -198,11 +270,11 @@ knitr::kable(df)
 
 | id|  value|
 |--:|------:|
-|  1| -0.132|
-|  2|  1.477|
-|  3| -0.217|
-|  4| -1.284|
-|  5|  0.386|
+|  1| -0.319|
+|  2|  1.168|
+|  3|  1.697|
+|  4|  0.931|
+|  5| -1.152|
 
 ---
 
