@@ -273,7 +273,12 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
 - 일부 outlier, keyframe을 휴리스틱으로 처리
 ???
 추가된 새 포인트는 two view에서만 있으므로 관측 집합을 풍부하게함
-
+---
+# 한계점
+1. Loop closing 부재
+2. Occlusion 처리 부족
+3. Relocalizaiton의 viewpoint 불변성 부족
+4. initialization에 인간 개입 필요
 ---
 class: inverse, middle, center, title-slide
 # ORB SLAM: a Versatile and Accurate Monocular SLAM System
@@ -302,6 +307,55 @@ BA는 non-linear optimization이므로 초기 추정값이 중요
 실시간 어플레키에션 실현 위해 BA는 탐색에서 지역 맵에 대해서만 수행하여 확장성 달성
 pose graph와 fast global optimization을 통해 루프 클로징 시 빠른 전역 최적화 수행
 ---
+## main contribution
+- ORB: Use of the same features for all tasks
+- Covisibility graph: Real time operation in large environments
+- Essential graph: Real time loop closing 
+- DBoW2: Real time camera relocalization
+- Model selection: Automatic and robust initialization 
+- Spawn-and-cull: Survival of the fittest
+???
+ORB: 빠른 이진디스크림터(256bit), 회전,스케일 불변성
+한종류 특징점으로 고정시켜 구현 단순,메모리연산공유,추가변환 및 매칭 불일치 감소
+covisibilitiy graph : 킽프레임들 간 공통관찰된 map points수를 가중치로 하는 그래프, local로해서 투영매칭로컬ba수행 (전역맵크기와 무관하게 추적및 매핑 비용 제어)
+Essential graph : covisibility graph가 dense할수있으므로 loop closing에서 spanning tree + 강한 covisibility edge + loop edge만 보존한 sparse graph, 여기서 scale 까지 있는 Sim(3)기반 pose graph optimization
+DBoW2: place recognition(ORB vocabulary) 사용해 후보 키프레임 빠르게 검색, 후보들과 PnP/RANSAC으로 global 재현 수행해tracking실패시 회복 및 지도 재사용 강화
+Homography/Fundamental matrix : 초기 두프레임에서 두 가정을 병렬 RANSAC으로 계산해 점수기반(휴리스틱)으로 모델 선택하고 해 모호성, low-parallax 검출시 초기화 보류해 잘못된 맵 생성 방지
+spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한검증(초기 몇 프레임동안 관찰 빈도, 최소관측 키프레임등)으로 트래킹 불가하거나 중복 요소 제거
+탐험 중 키프레임 빨리 추가하면 추적 강건성 증가, 반복 방문시 중복 키프레임 제거로 맵크기억제
+---
+# System Overview
+![](img/ORB/ovv.png)
+---
+## Feature Choice: ORB
+.pull-left[
+1. 이미지 피라미드 생성으로 근사적 scale invariance 확보
+1. FAST keypoint detection
+    - 각 후보 중심 픽셀에 대해 반지름 3인 원 위 16개 주변 픽셀 검사
+    - 주변 픽셀 중 연속된 n개가 모두 밝거나 어두우면 후보로 판별
+    - 학습된 decision tree로 빠른 비교
+1. High speed test
+    - 원 위 4개 지점 후보 먼저 검사해 적어도 3개 이상 중심 픽셀보다 밝거나 어두운지 검사
+1. non maximum suprresion
+    - 인접한 중복 FAST 후보 중 local maximum만 남김
+1. Harris measure 
+    - 남은 FAST keypoint에 대해 계산 후 점수 높은 코너 선택 
+1. orientation 할당
+    - keypoint 주변 patch에서 intensity centroid 계산
+    - keypoint 중심에서 centroid 방향으로의 각도로 otientation부여
+    - rotation invariance
+1. steered rBREIF descriptor
+    - 31x31 주변 patch에서 binary test 분산이 크고 correlation이 낮은 test pair에서 픽셀쌍 선별
+    - orientation에 따라 해당 pattern 회전
+    - intensity비교해 256bit binary descriptor생성
+
+]
+.pull-right[![](img/ORB/orbfeature.png)]
+---
+### Three threads: Tracking, Local Mapping and Loop Closing
+
+---
+
 class: center, middle
 
 # 끝
