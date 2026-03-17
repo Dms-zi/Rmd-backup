@@ -370,19 +370,16 @@ spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한
 ---
 ## Three threads: Tracking, Local Mapping and Loop Closing
 ### Tracking
-    1. ORB 추출
-    1. 초기 포즈 예측 (constans velocity motion model)
-    1. 가이드 매칭 & motion-only BA
-        - 예측 위치 주변에서 지역 맵 포인트들을 재투영해 매칭 후 motion only BA
-        - 이미지 영역 이탈, viewing direction, 관측가능거리로 매칭 제한 
-    1. 트래킹 실패 시 relocalization
-        - Bag-of-Words 데이터베이스로 후보 keyframe 검색 → PnP + RANSAC 전역 포즈 복구
-    1. 로컬 맵 조회
-        - covisibility graph로부터터 $K_1$, $K_2$, $K_{ref}$가져와 모든 map point reprojection해 추가 매칭
-    1. 최종 포즈 최적화 및 키프레임 결정
-      - 키프레임 삽입 조건
-          1. 마지막 relocalization 이후 20프레임
-          1. 추적된 포인트 수
+1. ORB 추출
+1. 초기 포즈 예측 (constans velocity motion model)
+1. 가이드 매칭 & motion-only BA
+    - 예측 위치 주변에서 지역 맵 포인트들을 재투영해 매칭 후 motion only BA
+    - 이미지 영역 이탈, viewing direction, 관측가능거리로 매칭 제한 
+1. 트래킹 실패 시 relocalization
+    - Bag-of-Words 데이터베이스로 후보 keyframe 검색 → PnP + RANSAC 전역 포즈 복구
+1. 로컬 맵 조회
+    - covisibility graph로부터터 $K_1$, $K_2$, $K_{ref}$가져와 모든 map point reprojection해 추가 매칭
+1. 최종 포즈 최적화 및 키프레임 결정
 ---
 ### Local Mapping
   - tracking에서 새 keyframe 삽입시 local BA 중단 
@@ -417,28 +414,34 @@ spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한
   - covisibility graph에서 spanning tree + 강한 covisibility(θmin) + 루프 엣지로 구성한 Essential Graph에 대해<br> Sim(3) 기반의 pose-graph 최적화해 dirft를 전체 그래프에 분산시킴
   - g2o Levenberg–Marquardt
 ]
-??? essential graph는 covisibility graph보다 sparse해 pose graph가빠르게최적화
+---
+### Map points, Keyframes and their Selection
 ---
 ### Covisibility graph
+.pull-left-70.nt-01[
 .f-85.nt-02[
-- node=KeyFrame/ edge=두 KeyFrame이 공유하는 map point 수(가중치 θ)
-- 전체 연결 정보를 담은 dense한 무향 가중 그래프.
+- node:KeyFrame
+- edge:두 KeyFrame이 공유하는 map point 수(가중치 θ)
+- 전체 연결 정보 담은 dense한 무향 가중 그래프
 - 로컬 맵 선택(어떤 KeyFrame들이 현재 프레임과 covisible한지), 특징 매칭 범위 결정, 키프레임 이웃 관계 판단
 ]
 
 ### Spanning tree 
 .f-85.nt-02[
-- covisibility grap를 바탕으로 시스템이 점진적으로 유지
+- covisibility graph 바탕으로 시스템이 점진적으로 유지
 - 모든 node를 연결하면서 edge는 최소화하는 spare tree
 - Essential Graph의 기반 keyframe 삽입,삭제 시 연결성 유지 위해 사용
 ]
 
 ### Essential Graph
 .f-85.nt-02[
-- node=모든 KeyFrame/ edge=Spanning tree edge + covisibility에서 가중치 큰 edgs + loop closure edge
+- node:모든 KeyFrame
+- edge: Spanning tree edge + covisibility에서 가중치 큰 edgs + loop closure edge
 - covisibility graph보다 sparse, loop closing을 위해 강한 네트워크 유지하도록 설계
 - pose graph optimization 수행할 때 사용, Sim(3) 제약 가진 edge들로 구성되어 루프에서 생긴 drift를 전체 그래프에 분배
 ]
+]
+.pull-right-30.nr-02[![](img/ORB/graph.png)]
 
 ---
 
