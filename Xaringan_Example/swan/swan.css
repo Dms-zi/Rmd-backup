@@ -1845,7 +1845,28 @@ slides > slide {
     color: rgb(61, 59, 59);
     text-align: center;
 }
+.remark-slide-content:not(.title-slide)::before {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 10px;
+  width: 80px;
+  height: 30px;
+  background: url("../lab_logo.jpg") no-repeat center;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 0;
+}
 
+.logo {
+  position: absolute;
+  top: 94%;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
 /* Title slide */
 /* ref) https://github.com/yihui/xaringan/wiki/Title-slide */
 .title-slide .remark-slide-number {

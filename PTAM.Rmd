@@ -1,7 +1,10 @@
 ---
-title: "PTAM & ORB SLAM"
-subtitle: "Eunji Lee"
+title: "PTAM"
+subtitle: "ISMAR, 2007"
 author: |
+  Georg Klein<sup>*</sup>, David Murray<sup>†</sup><br>
+  Active Vision Laboratory<sup>*</sup><br>
+  Department of Engineering Science, University of Oxford<sup>†</sup>
   
 date: 2026.03.10
 
@@ -22,39 +25,38 @@ output:
       countIncrementalSlides: false
       beforeInit: ["Xaringan_Example/swan/macros.js"] 
       scale: true
----
 
-# Table of Contents
-.pull-left.content-list[
-1. Introduction
-1. PTAM
-1. System Overview
-1. Tracking
-1. Local Mapping
-1. Conclusion
-]
-
----
-class: inverse, middle, center, title-slide
-# PTAM
-### ISMAR, 2007
-### Georg Klein*,  David Murray†
-Active Vision Laboratory*,
-Department of Engineering Science
-University of Oxford†
 ---
 # Introduction
+.pull-left.nt-01.f-90[
 - 소규모 AR작업 공간에서 휴대용 카메라를 추적하도록 설계된 시스템 제안
-![]()
+- Registration: 현실 세계 특정 지점이 가상 세계 좌표와 일치하도록 실시간 매칭
+- 실시간 camera pose 계산 위해 사전 지식인 지도(CAD, Fiducial Markers) 필요
+
+&rarr; 사전 지식에 의존하는 방식에 벗어나고자 <br>
+Extensible Tracking, Parallel Threads, SLAM 방식 도입
+
+||기존 SLAM방식|PTAM|
+|:---|:---|:---|
+|시스템 구조| intimately linked| two parallel threads|
+|지도 작성| Incremental filtering | Batch optimization|
+|데이터 사용량| Re-filtering every frame | Keyframe|
+|지도 밀도| Sparse | Dense |
+]
+.pull-right.nt-02.nr-02[
+![](img/ORB/PTAMfig1.png)
+]
 ---
 ## Method overview in the context of SLAM
 
-- Tracking과 Mapping을 두 개의 병렬 스레드로 분리 실행
+- Tracking과 Mapping을 두 개의 Parallel Threads로 분리 실행
 
 - Keyframe 기반 Mapping, Bundle Adjustment
 
 - Stereo pair(5-point algorithm)으로부터 dense하게 초기화
 - Epipolar search로 새로운 점 초기화
+
+- 기존 대비 큰 지도 생성 
 
 ---
 ## The Map
@@ -75,7 +77,7 @@ bits per pixel
 ---
 ## coarse-to-fine Tracking
 .nt-02[
-1. motion model로부터 prior pose 생성 후 projection
+1. Decaying velocity motion model로부터 prior pose 생성 후 projection
 1. coarse단계
     - coarsest-scale에서 50개 특징점 검색
     - large radius로 탐색해 매칭 시도
@@ -103,7 +105,7 @@ constant velocity랑 다른점은 측정 데이터가 들어오지 않으면 카
 ### Camera pose and projection
 
 $$
-\begin{align}
+\begin{align*}
 {}^{c}\boldsymbol{p}_{j} &= {}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{j} \quad \mathbf{E}\in\mathbb{R}^{4\times4}, SE(3) \\[6pt]
 \begin{pmatrix} u_i \\ v_i \end{pmatrix}
 &= \mathrm{CamProj}({}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{i}) \\[6pt]
@@ -118,7 +120,7 @@ $$
 r &= \sqrt{\frac{x^2+y^2}{z^2}} \\[6pt]
 r' &= \frac{1}{\omega}\arctan\left(2r\tan\frac{\omega}{2}\right) \\[6pt]
 {}^{c}\mathbf{E}'_{\mathrm{w}} &= M{}^{c}\mathbf{E}_{\mathrm{w}} = \exp(\mu){}^{c}\mathbf{E}_{\mathrm{w}}, \quad μ\in \mathbb{R}^6, \mathfrak{se}(3) \quad M\in\mathbb{R^{4\times4}}
-\end{align}
+\end{align*}
 $$
 ???
 E는 4x4 SE(3) Transformation matrix
@@ -141,18 +143,9 @@ $$\mathbf{A} = \begin{bmatrix}
 - $\mathbf{A}$ : source에서 1px 움직일때 current가 얼마나 움직이는지 Jacobian
 ]
 
+.mt-02[
 &rarr; Performing these projections ensures that the warping matrix compensates (to first order) not only **changes in perspective** and
-scale but also the **variations in lens distortion** across the image.
-$$\mathbf{u}_c(\mathbf{u}_s + \Delta \mathbf{u}_s) \approx f(\mathbf{u}_s) + \frac{\partial f}{\partial \mathbf{u}_s} \Delta \mathbf{u}_s = \mathbf{u}_c + \mathbf{A} \Delta \mathbf{u}_s$$
-???
-# Homography ??
-.nt-02[
-$$\mathbf{x}_c \sim \mathbf{H}\mathbf{x}_s,\qquad\mathbf{x}_s=\begin{bmatrix}u_s\\v_s\\1\end{bmatrix},\quad\mathbf{x}_c=\begin{bmatrix}u_c\\v_c\\1\end{bmatrix}$$
-$$\mathbf{H}=\begin{bmatrix}h_{11} & h_{12} & h_{13}\\h_{21} & h_{22} & h_{23}\\h_{31} & h_{32} & h_{33}\end{bmatrix}, \quad \begin{bmatrix}\tilde{u}_c\\\tilde{v}_c\\\tilde{w}_c\end{bmatrix}=\mathbf{H}\begin{bmatrix}u_s\\v_s\\1\end{bmatrix}$$
-$$u_c=\frac{h_{11}u_s+h_{12}v_s+h_{13}}{h_{31}u_s+h_{32}v_s+h_{33}},\qquad v_c=\frac{h_{21}u_s+h_{22}v_s+h_{23}}{h_{31}u_s+h_{32}v_s+h_{33}}$$
-$$a=h_{11}u_s+h_{12}v_s+h_{13},\qquad b=h_{21}u_s+h_{22}v_s+h_{23},\qquad w=h_{31}u_s+h_{32}v_s+h_{33}$$
-$$u_c=\frac{a}{w},\qquad v_c=\frac{b}{w}$$
-$$\mathbf{A}=\begin{bmatrix}\frac{\partial u_c}{\partial u_s} & \frac{\partial u_c}{\partial v_s}\\[4pt]\frac{\partial v_c}{\partial u_s} &\frac{\partial v_c}{\partial v_s}\end{bmatrix}=\frac{1}{w}\begin{bmatrix}h_{11}-u_c h_{31} & h_{12}-u_c h_{32}\\h_{21}-v_c h_{31} & h_{22}-v_c h_{32}\end{bmatrix}\Bigg|_{(u_s^0,v_s^0)}$$
+**scale** but also the **variations in lens distortion** across the image.
 ]
 ---
 2. 이미지 피라미드 레벨 선택
@@ -215,8 +208,8 @@ $$\mu' = \underset{\mu}{\operatorname{argmin}} \sum_{j \in S} \operatorname{Obj}
     - 스케일 고정을 위해 baseline을 10cm로 가정
     - plane에 맵을 맞추기 위해 삼중점을 RANSAC으로 선택해 dominant plane계산 (최적화하지 않음 )
 ]
-.nt-02[
-.pull-right.right[![:scale 70%](img/ORB/fig2.png)]
+.nt-03[
+.pull-right.right[![:scale 80%](img/ORB/fig2.png)]
 ]
 ---
 ### keyframe insertion and epipolar search
@@ -246,9 +239,6 @@ $$\mu' = \underset{\mu}{\operatorname{argmin}} \sum_{j \in S} \operatorname{Obj}
 $$\mathbf{M} = \sum_{x, y} w(x, y) \begin{pmatrix} I_x^2 & I_x I_y \\ I_x I_y & I_y^2 \end{pmatrix}$$
 $$w(u,v) = \exp\left(-\frac{u^2+v^2}{2\sigma^2}\right)$$
 
-- Harris corner response
-$$R = \det(\mathbf{M}) - k\big(\operatorname{trace}(\mathbf{M})\big)^2$$
-$$R = \lambda_1\lambda_2 - k(\lambda_1+\lambda_2)^2$$
 - Shi-Tomasi (Good Features to Track)
 $$\text{score} = \min(\lambda_1, \lambda_2)$$
 ]
@@ -277,9 +267,9 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
 ### Data associatoin refinement
 .f-90.nt-01[
 -  mapping thread가 여유있는 시간에 새로운 point의 관측 집합을 추가하고 outlier 재측정
-- 새 keyframe이 들어오면 중단됨(우선순위 낮음)
+- 우선순위가 낮은 process로 새 keyframe이 들어오면 중단
 1. 과거 keyframe에서 해당 point가 보이는지 재측정후 관측 추가
-1. BA에서 Tukey에 의해 가중치가 작아진(잔차가 클 경우) 원래 추적보다 좁은 radius로 해당 패치를 다시 찾음
+1. BA에서 Tukey에 의해 가중치가 작아진(잔차가 큰) 원래 추적보다 좁은 radius로 해당 패치를 다시 찾음
 ]
 
 ### General implementation notes
@@ -293,171 +283,73 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
 ???
 추가된 새 포인트는 two view에서만 있으므로 관측 집합을 풍부하게함
 ---
+# Results
+- Tracking performance on live video
+    - 책상 및 주변 1,656 프레임의 실시간 비디오 입력
+    - Panning, Zoom-in, 빠른 움직임의 카메라 동작
+    - 의도적으로 카메라를 흔들어 추적 실패하게하고 Recovery 하는지 확인
+    - Keyframe 57개, Feature Points 4,997개
+    - 이미지 피라미드의 가장 세밀한 레벨(51%), 거친 레벨(7%)에 특징점 분포
+    - Relocalisation: 추적이 끊겨 다시 위치를 찾을 때 최대 90ms
+.center.mt-01[![:scale 80%](img/table1.png)]
+---
+# Results
+.center.nt-02[![:scale 60%](img/ORB/PTAMfig3.png)]
+---
+# Results
+.nt-02[
+- Mapping scalability
+    - Mapping thread에서 지도가 커짐에 따라 성능 저하
+    - 한계 제시: 6,000개 feature $M$, 150개 Keyframe $N$ 
+    - Bundle Adjustment의 계산 비용
+        - Global: $O(N^3)$, 실제 구현 시 $O(N^2M)$
+        - Local: $O(NM)$
+]
+.center.mt-01[![:scale 40%](img/ORB/table2.png)]
+.center.mt-01[![:scale 70%](img/ORB/PTAMfig4.png)]
+---
+# Results
+.nt-01[
+- Synthetic comparison with EKF-SLAM
+    - 두 벽면이 직각으로 만나는 가상 공간 활용해 Ground truth를 알고 있는 상태에서 오차 측정
+    - 18.2m 거리 600 프레임 동안 이동
+
+||EKF-SLAM|PTAM|
+|:---|:---|:---|
+|특징점 개수|6,600|114|
+|정확도| 6mm|135mm|
+|Tracking 성능| 20ms|3ms~40ms|
+.center[![:scale 70%](img/ORB/PTAMfig5.png)]
+]
+???
+andrew davison의 monoslam을 개선한 real time slam relocalisaition버전의 ekf slam
+ekf는 모든 특징점 간 covariance를 계산해야함 연산량 많음 
+PTAM은 ba해서 더 정밀하게 가능 
+---
+# Results
+.nt-02[
+- Subjective comparison with EKF-SLAM
+  - SLAM wiggle: 특징점 depth를 추정하기 위해 카메라를 부드럽게 움직여야함 
+  - Scalability: 지도가 커질수록 특징 점수의 세제곱까지 비례해 증가
+  - Image Pyramid기법으로 Zoom-in,out에 강건성 보임 
+- AR with a hand-held camera 
+  - initialisation 완료시 즉시 AR application 사용 가능
+  - 카메라가 가상 세계와 상호작용하는 UI 도구로 사용 
+  - Ewok Panpage(슈팅게임), Virtual Magnifying Glass(가상 돋보기) 등 
+]
+.center[![:scale 55%](img/ORB/PTAMfig7.png)]
+---
 # 한계점
-1. Loop closing 부재
-2. Occlusion 처리 부족
-3. Relocalizaiton의 viewpoint 불변성 부족
-4. initialization에 인간 개입 필요
----
-class: inverse, middle, center, title-slide
-# ORB SLAM: a Versatile and Accurate Monocular SLAM System
-## IEEE Transactions on Robotics. 2015
-<div class="small" style="margin-top: 1.5em; font-size: 0.8em;">
-    <a href="https://github.com/raulmur/ORB_SLAM" style="color: inherit;">https://github.com/raulmur/ORB_SLAM</a>
-  </div>
----
-# Introduction
-## Bundle Adjustment (BA)
-- SLAM 시스템의 핵심 요소로 3D map point와 camera pose를 최적화하는 과정
-- 3D map point를 keyframe에 projection하여 reprojection error를 최소화하는 최적화 문제
-- 제공해야하는 조건   
-  1. Corresponding observations of map points(scene features) 
-  2. Keyframe selection avoiding unnecessary redundancy
-  3. A strong network configuration of keyframes and points
-  4. An Initial estimation for the non-linear optimization
-  5. A local map in exploration for scalability
-  6. The ability to perform fast global optimizations for loop closing
-  
-???
-키프레임들의 부분집합사이에서 동일한 3d map point에 대해서 정확한 관측값(픽셀좌표) 제공해야 최적화 가능
-keyframe이 너무 증가하면 BA 복잡성 증가-> ORBSLAM은 survival of the fittest 전략 사용(적자생존)
-충분한 시차를 가진 keyframe 세트와 loop closure 매치로 달성
-BA는 non-linear optimization이므로 초기 추정값이 중요
-실시간 어플레키에션 실현 위해 BA는 탐색에서 지역 맵에 대해서만 수행하여 확장성 달성
-pose graph와 fast global optimization을 통해 루프 클로징 시 빠른 전역 최적화 수행
----
-## main contribution
-- ORB: Use of the same features for all tasks
-- Covisibility graph: Real time operation in large environments
-- Essential graph: Real time loop closing 
-- DBoW2: Real time camera relocalization
-- Model selection: Automatic and robust initialization 
-- Spawn-and-cull: Survival of the fittest
-???
-ORB: 빠른 이진디스크림터(256bit), 회전,스케일 불변성
-한종류 특징점으로 고정시켜 구현 단순,메모리연산공유,추가변환 및 매칭 불일치 감소
-covisibilitiy graph : 킽프레임들 간 공통관찰된 map points수를 가중치로 하는 그래프, local로해서 투영매칭로컬ba수행 (전역맵크기와 무관하게 추적및 매핑 비용 제어)
-Essential graph : covisibility graph가 dense할수있으므로 loop closing에서 spanning tree + 강한 covisibility edge + loop edge만 보존한 sparse graph, 여기서 scale 까지 있는 Sim(3)기반 pose graph optimization
-DBoW2: place recognition(ORB vocabulary) 사용해 후보 키프레임 빠르게 검색, 후보들과 PnP/RANSAC으로 global 재현 수행해tracking실패시 회복 및 지도 재사용 강화
-Homography/Fundamental matrix : 초기 두프레임에서 두 가정을 병렬 RANSAC으로 계산해 점수기반(휴리스틱)으로 모델 선택하고 해 모호성, low-parallax 검출시 초기화 보류해 잘못된 맵 생성 방지
-spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한검증(초기 몇 프레임동안 관찰 빈도, 최소관측 키프레임등)으로 트래킹 불가하거나 중복 요소 제거
-탐험 중 키프레임 빨리 추가하면 추적 강건성 증가, 반복 방문시 중복 키프레임 제거로 맵크기억제
----
-# System Overview
-![](img/ORB/ovv.png)
----
-## Feature Choice: ORB
-.pull-left-70.f-80.nt-02[
-1. 이미지 피라미드 생성(scale invariance)
-1. FAST keypoint detection
-    - 각 후보 중심 픽셀에 대해 반지름 3인 원 위 16개 주변 픽셀 검사
-    - 주변 픽셀 중 연속된 n개가 모두 밝거나 어두우면 후보로 판별
-    - 학습된 decision tree로 빠른 비교
-1. High speed test
-    - 원 위 4개 지점 후보 먼저 검사, 3개 이상 중심 픽셀보다 밝거나 어두운지 검사
-1. non maximum suprresion
-    - 인접한 중복 FAST 후보 중 local maximum만 남김
-1. Harris measure 
-    - 남은 FAST keypoint에 대해 계산 후 점수 높은 코너 선택 
-1. orientation 할당 (rotation invariance)
-    - keypoint 주변 patch에서 intensity centroid 계산
-1. steered rBREIF descriptor
-    - 31x31 주변 patch에서 binary test 분산 크고 correlation이 낮은 test pair에서 픽셀쌍 선별
-    - orientation에 따라 해당 pattern 회전후 intensity비교해 256bit binary descriptor생성
+1. corner 특징점 의존해 motion blur에 취약<br>
+&rarr;
+1. 반복된 구조일 경우 epipolar search에 outlier 발생 <br>
+&rarr;
+1. Loop closing 부재<br>
+&rarr;
+1. map point cloud의 기하학적 정보 부족으로 Occlusion 처리 불가<br>
+&rarr;
+1. Relocalizaiton의 viewpoint 불변성 부족<br>
+&rarr;
+1. initialization에 인간 개입 필요<br>
+&rarr;
 
-]
-.pull-right-30.nr-02[![](img/ORB/orbfeature.png)]
----
-## Three threads: Tracking, Local Mapping and Loop Closing
-### Tracking
-1. ORB 추출
-1. 초기 포즈 예측 (constans velocity motion model)
-1. 가이드 매칭 & motion-only BA
-    - 예측 위치 주변에서 지역 맵 포인트들을 재투영해 매칭 후 motion only BA
-    - 이미지 영역 이탈, viewing direction, 관측가능거리로 매칭 제한 
-1. 트래킹 실패 시 relocalization
-    - Bag-of-Words 데이터베이스로 후보 keyframe 검색 → PnP + RANSAC 전역 포즈 복구
-1. 로컬 맵 조회
-    - covisibility graph로부터터 $K_1$, $K_2$, $K_{ref}$가져와 모든 map point reprojection해 추가 매칭
-1. 최종 포즈 최적화 및 키프레임 결정
----
-### Local Mapping
-  - tracking에서 새 keyframe 삽입시 local BA 중단 
-    1. KeyFrame 삽입
-        - covisibility graph update, spanning tree 연결 갱신, BoW 벡터 계산
-    1. 최근 생성된 map point culling
-        - 초기 3개 keyframe 추적률(예측 가능 프레임의 >25%에서 관측) 검사
-    1. 새 Map Point 생성
-        - keyframes 간 unmatched ORB 매칭
-        - epipolar constraints, triangulation 
-        - reprojection error, scale 일관성 확인 후 채택
-    1. Local BA
-        - 현재 키프레임 $K_i$, covisibility로 연결된 $K_c$, map points 최적화
-        - 관측했지만 covisibility로 연결되지 않으면 fixed
-    1. Keyframe Culling
-        - $K_c$ 내 다른 keyframe의 90% 이상 point가 다른 최소 3개 키프레임에서 관측되면 중복으로 간주되어 제거
----
-### Loop Closing
-.f-90[
-1. 후보 탐지
-  - 새 keyframe $K_i$ BoW 벡터로 데이터베이스 질의
-  - covisibility 이웃들의 최저 점수 $s_{min} 기준으로 후보 필터링, 바로 연결된 이웃들은 제외
-  - 연속된 후보가 3번 검출되어야 루프 후보($K_l$)로 인정
-1. Sim(3) 변환 계산 (rotation, translation, scale)
-  - $K_i$와 후보 간 3D-3D 대응 찾아 Horn 방법으로 Sim(3)추정
-  - RANSAC으로 검증하고 inlier로 최적화
-1. 루프 융합(Fusion)
-  - Sim(3)로 현재 keyframe pose update, 이웃에게 전파 
-  - 양측 map points reprojection해 일치하는 포인트들 합침
-  - covisibility edge 갱신해 루프 그래프에 연결 
-1. Essential Graph 최적화
-  - covisibility graph에서 spanning tree + 강한 covisibility(θmin) + 루프 엣지로 구성한 Essential Graph에 대해<br> Sim(3) 기반의 pose-graph 최적화해 dirft를 전체 그래프에 분산시킴
-  - g2o Levenberg–Marquardt
-]
----
-### Map points, Keyframes and their Selection
-- map point $p_i$
-    - ${}^{w}X_{i}$, world coordinate system
-    - $n_i$, viewing direction
-    _ $D_i$, ORB descriptor
-    - $d_{max}, d_{min}$, distance which the point can be observed
-- keyframe $K_i$
-    - ${}^{i}\mathbf{T}_w$, rigid body transformation 
-    - camera intrinsics (focal length, principal point)
-    - ORB features extracted in the frame(Undistored)
----
-### Covisibility graph
-.pull-left-70.nt-01[
-.f-85.nt-02[
-- node:KeyFrame
-- edge:두 KeyFrame이 공유하는 map point 수(가중치 θ)
-- 전체 연결 정보 담은 dense한 무향 가중 그래프
-- 로컬 맵 선택(어떤 KeyFrame들이 현재 프레임과 covisible한지), 특징 매칭 범위 결정, 키프레임 이웃 관계 판단
-]
-
-### Spanning tree 
-.f-85.nt-02[
-- covisibility graph 바탕으로 시스템이 점진적으로 유지
-- 모든 node를 연결하면서 edge는 최소화하는 spare tree
-- Essential Graph의 기반 keyframe 삽입,삭제 시 연결성 유지 위해 사용
-]
-
-### Essential Graph
-.f-85.nt-02[
-- node:모든 KeyFrame
-- edge: Spanning tree edge + covisibility에서 가중치 큰 edgs + loop closure edge
-- covisibility graph보다 sparse, loop closing을 위해 강한 네트워크 유지하도록 설계
-- pose graph optimization 수행할 때 사용, Sim(3) 제약 가진 edge들로 구성되어 루프에서 생긴 drift를 전체 그래프에 분배
-]
-]
-.pull-right-30.nr-02[![](img/ORB/graph.png)]
-
----
-### Bags of Words Place Recognition
-- loop detection, relocalization을 위한 DBoW2 기반 bags of words
-- visual words: descriptor space에서의 visual vocabulary를 offline으로 생성
-- inve 
----
-class: center, middle
-
-# 감사합니다
