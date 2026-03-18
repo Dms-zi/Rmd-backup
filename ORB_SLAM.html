@@ -424,6 +424,15 @@ spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한
 ]
 ---
 ### Map points, Keyframes and their Selection
+- map point `\(p_i\)`
+    - `\({}^{w}X_{i}\)`, world coordinate system
+    - `\(n_i\)`, viewing direction
+    _ `\(D_i\)`, ORB descriptor
+    - `\(d_{max}, d_{min}\)`, distance which the point can be observed
+- keyframe `\(K_i\)`
+    - `\({}^{i}\mathbf{T}_w\)`, rigid body transformation 
+    - camera intrinsics (focal length, principal point)
+    - ORB features extracted in the frame
 ---
 ### Covisibility graph
 .pull-left-70.nt-01[
@@ -452,7 +461,7 @@ spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한
 .pull-right-30.nr-02[![](img/ORB/graph.png)]
 
 ---
-
+---
 class: center, middle
 
 # 감사합니다
