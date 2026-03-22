@@ -617,21 +617,139 @@ $$ R_H = \frac{S_H}{S_H + S_F} \qquad R_H &gt; 0.45 &amp;rarr; homography$$
 - RANSAC, PnP로 pose 추정 후 keyframe map point의 추가 매치를 찾기 위한 guided search 수행
 
 ### Track Local Map
+- 현 frame에서 pose update와 더많은 map point 찾기위해 local map만 투영해 검색 
+  - `\(K_1\)`: 현재 frame과  map point를 공유하는 keyframe들 집합
+  - `\(K_2\)`: covisibility graph에서 `\(K_1\)`에 연결된 이웃 keyframe들
+  - `\(K_ref \in K_1\)`: 현재 frame과 가장 많은 map point를 공유하는 reference keyframe
+- `\(K_1\)`, `\(K_2\)`의 map point 검색
+  1. projection: 이미지 평면에 투영 후 이미지 영역 밖이면 폐기
+  1. viewing direction: `\(v \cdot n \geq cos(60^{\circ})\)`
+  1. distance: camera center-point `\([d_{min},d_{max}]\)`, ORB scale invariance 범위 유지 위해
+  1. scale: `\(s=\frac{d}{d_{min}}\)`, 이미지 피라미드 스케일 레벨
+  1. near descriptor matching: 투영위치 근처+ 예측 스케일+ 미매칭 후보만 Hamming distance 최소 대응 선택
+???
+viewing direction: 카메라중심부터 포인트까지 뷰잉잉레이와 포인트의 평균관측방향n간의 각도 
+distance:카메라와 포인트 간 거리리 계산
+map point ORB descriptor `\(D\)`와 매칭되지 않은 현재 frame ORB feature중 투영 위치 `\(x\)`근처, 예측된 scale level에 해당하는 특징만 비교해 Hamming distance로 최적 대응 선택  
+---
+
 ### New keyframe decision
+- 현재 frame에서 map point 대응이 모두 찾아지고 camera pose최적화 후 결정
+- 빠른 keyframe 삽입(spawn) %rarr; 이후 중복 제거(cull)
+1. global relocalization 이후 20 frame경과
+1. local mapping 유휴 상태 혹은 마지막 keyframe 삽입 후 20frame 이상 경과
+    - local mapping이 바쁘면 중지시키고 신규 keyframe처리 
+1. 현재 frame이 50개 이상 point tracking시
+1. tracks &lt; 90% of `\(K_ref\)`
+
 ---
 # Local Mapping
+- 새로운 keyframe 처리하고 주변 지역에 대해 local BA 수행
+- local 단위에서 정확한 최적화해 추적 안정성 향상
+- 3d point 추가해 맵 확장
+- 불필요한 데이터 제거
 ### Keyframe insertion
+1. covisibility graph update: 새 node `\(K_i\)`추가, 다른 keyframe과 공유 map point로 edge update
+1. spanning tree update: 가장 많은 map point를 공유하는 keyframe이 부모
+1. compute the BoW vector: triangulation위한 data association에 도움 
 ### Recent map points culling
+- 새로 triangulation 된 후 받아야할 검증
+1. 보일것으로 예측되는 frame들 중 &gt;25% 이상 실제 추적되어야 함
+1. 한개 이상 keyframe 경과시 최소 3개 keyframe에서 관찰되어야함
+- keyframe이 삭제되거나, local BA에서 outlier 제거 시 반영
 ### New map point creation
+- 현재 keyframe의 미매칭 ORB feature를 다른 keyframe와 매칭 &amp;rarr; BoW place recognition
+- epipolar constraint, triangulation
+- 두 카메라 depth, parallax, reprojection error, scale consistency 확인
+- 초기 맵 생성 후 주변 연결 keyframe에 projection해 추가 관측 검색 &amp;rarr; Track local map
 ### Local bundle adustment
+- Tracking thread와 병렬 실행
+- keyframe 삽입 시 interrupt
+- 현재 keyframe `\(K_i\)`, covisibility graph로 연결 된 이웃 keyframe들$K_c$, 관측하는 모든 map point 최적화
+- 같은 관측을 보지만 이웃이 아닌경우 최적화에 포함되나 고정됨
 ### Local keyframe culling
+- `\(K_c\)` 중 90% map point가 최소 3개 다른 keyframe에서 동일하거나 세밀한 스케일에서 관측되면 제거
 
 ---
 # Loop Closing
+- local mapping에서 처리된 마지막 keyframe `\(K_i\)` 받아 루프 감지 
 ### Loop candidate detection
+1. `\(K_i\)` BoW vector와 covisibility graph 내 모든 이웃간 유사도 계산(`\(\theta_{min} = 30\)`)후 가장 낮은 `\(s_{min}\)`유지
+1. database query에서 `\(s_{min}\)`보다 낮은 모든 keyframe 제거
+1. `\(K_i\)`에 직접 연결된 keyframe제거
+1. 연속 3개 루프 후보가 covisible로 연결되어야 함 
 ### Compute the similarity transformation
+- scale drift를 이유로 Sim(3) 계산해야
+- input: `\(K_i\)`의 map point, 루프 후보 `\(K_l\)`의 map point 사이 ORB correspondence(`\(P_i,Q_i\)`의 3D-3D)
+1. RANSAC 반복으로 Sim(3) 생성
+    - Horn method로 similarity transform `\({}^{l}S_{i}\)` 추정
+    - 모든 대응응에 대해 error 측정 후 inlier 개수가 충분하지않으면 반복
+1. optimization, guided matching
+    - inlier와 잔파 분포가 충분하면 루프로 수락
+    
 ### Loop fusion
+- 중복된 map point 융합하고 loop closing 연결할 covisibility graph의 edge 삽입
+1. `\(K_i\)` pose 보정
+    - `\({}^{i}T_w\)`,${}^{l}S_{i}$,이웃에게 전파돼 연결 하며 루프 양쪽 정립
+1. guided search
+  - map point를 보정된 `\(K_i\)`와 이웃에 투영
+  - 좁은 영역에서 ORB 매칭 후 하나의 ID로 합침(fuse)
+1. covisibility edge 추가
+`
 ### Essential graph optimization
+---
+
+# Appendix
+
+### Bundle Adjustment
+`$${}^{}X_{w,j} \in \mathbb R^3, \quad {}^{}T_{iw} \in SE(3), \quad {}^{}x_{i,j} \in \mathbb R^2$$`
+
+`$$\boldsymbol{e}_{i,j} = \boldsymbol{x}_{i,j} - \pi_i(\boldsymbol{T}_{iw}, \boldsymbol{X}_{w,j})$$`
+
+`$$\begin{align*}
+\pi_i(\mathbf{T}_{iw}, \mathbf{X}_{w,j}) &amp;= \begin{bmatrix} f_{i,u} \frac{x_{i,j}}{z_{i,j}} + c_{i,u} \\ f_{i,v} \frac{y_{i,j}}{z_{i,j}} + c_{i,v} \end{bmatrix} \\
+[x_{i,j} \quad y_{i,j} \quad z_{i,j}]^T &amp;= \mathbf{R}_{iw} \mathbf{X}_{w,j} + \mathbf{t}_{iw}
+\end{align*}$$`
+
+`$${}^{}R_{iw} \in SO(3), \quad {}^{}t_{iw} \in \mathbb R^3$$`
+
+- cost function
+`$$C = \sum_{i,j} \rho_h (\mathbf{e}_{i,j}^T \Omega_{i,j}^{-1} \mathbf{e}_{i,j})$$`
+- `\(\rho_h\)`: Huber loss
+- $\Omega_{i,j} $: 관측 covariance matrix 2x2
+- `\({}^{i}e_j\)`: reprojection error
+
+### pose graph optimization
+`$$\mathbf{e}_{i,j} = \log_{\text{Sim(3)}}(\mathbf{S}_{ij} \mathbf{S}_{jw} \mathbf{S}_{iw}^{-1}), \quad \mathbf{e}_{i,j} \in \mathbb R^7$$`
+- cost function
+`$$C = \sum_{i,j} \left( \mathbf{e}_{i,j}^T \mathbf{\Lambda}_{i,j} \mathbf{e}_{i,j} \right)$$`
+- `\(\mathbf{\Lambda}_{i,j}\)`: information matrix of edge(identity)
+- loop closing에서는 keyframe 하나를 anchor로 고정하고 나머지 keyframe을 조정 
+### Relative Sim(3) Optimization
+`$$\begin{align*}
+\mathbf{e}_1 &amp;= \mathbf{x}_{1,i} - \pi_1(\mathbf{S}_{12}, \mathbf{X}_{2,j}) \\
+\mathbf{e}_2 &amp;= \mathbf{x}_{2,j} - \pi_2(\mathbf{S}_{12}^{-1}, \mathbf{X}_{1,i})
+\end{align*}$$`
+
+- cost function
+`$$C = \sum_n \left( \rho_h(\mathbf{e}_1^T \Omega_{1,i}^{-1} \mathbf{e}_1) + \rho_h(\mathbf{e}_2^T \Omega_{2,j}^{-1} \mathbf{e}_2) \right)$$`
+???
+Full BA:
+최적화 변수: 모든 키프레임의 poses `\(T_{iw}\)`와 모든 맵 포인트 위치 `\(X_{w,j}\)`
+보통 첫 키프레임 하나를 고정 → 전체 자유도 고정
+사용 시기: 초기 지도 생성 직후나 오프라인 정밀 정제
+
+
+Local BA:
+최적화 변수: 현재 처리 중인 keyframe `\(K_i\)`, 그것과 직접 연결된 키프레임들$K_c$, 그리고 이들이 관측하는 모든 맵 포인트들
+고정되는 항목: 지역 외부의 키프레임(또는 지역과 연결되지만 고정으로 둔 키프레임) , 이들은 constraint(관측)으로는 등장하지만 변수로는 업데이트되지 않음
+목적: 국소 영역의 정확도를 높이고, 연산량을 제한해 실시간으로 동작 가능하게 함
+
+
+Motion-only BA (pose optimization):
+최적화 변수: 현재 프레임(또는 추정하려는 카메라)의 pose `\(T_{iw}\)` 만
+고정되는 항목: 모든 맵 포인트 `\(X_{w,j}\)` 
+목적: 프레임별 추적 단계에서 빠르게 포즈를 정제(예: 이전 프레임 예측 → guided matching → 모션-온리 최적화)
 ---
 class: center, middle
 
