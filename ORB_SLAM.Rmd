@@ -6,7 +6,7 @@ author: |
   Active Vision Laboratory<sup>*</sup><br>
   Department of Engineering Science, University of Oxford<sup>†</sup>
   
-date: 2026.03.10
+date: 2026.03.23
 
 output:
   xaringan::moon_reader:
@@ -76,20 +76,20 @@ i번째 키프레임에 대한 Ki 카메라 중심좌표계
 bits per pixel
 ---
 ## coarse-to-fine Tracking
-.nt-02[
+.nt-02.nb-01[
 1. Decaying velocity motion model로부터 prior pose 생성 후 projection
 1. coarse단계
     - coarsest-scale에서 50개 특징점 검색
-    - large radius로 탐색해 매칭 시도
+    - large pixel radius로 탐색해 매칭 시도
     - 일부 패치에 대해서 subpixel refinement
     - 매칭으로부터 초기 pose update 
     (robust M-estimator + reweighted least squares)
 1. fine 단계
-    - 최대 1000개의 잠재적으로 보이는 패치 reprojection
+    - coarse에서 구한 pose를 바탕으로 원본 해상도 이미지에서 1000개 reprojection
     - 이전보다 좁은 radius로 탐색, 소수 패치에 대해서 subpixel refinement
     - coarse에서 얻은 매칭들과 합쳐 최종 pose update
 ]
-
+.f-80[
 ### Image acquisition
 .nt-02[
 - Unibrain Fire-i video camera equipped
@@ -98,38 +98,44 @@ with a 2.1mm wide-angle lens
 - Prior pose estimation &rarr; Decaying velocity model ($v_t = \alpha \cdot v_{t-1}$)
 - 각 피라미드 레벨에서 FAST-10 코너 검출기 실행
 ]
+]
 ???
 constant velocity랑 다른점은 측정 데이터가 들어오지 않으면 카메라 속도가 점점 줄어들고 멈춤
 코너 검출은 비최대 억제없이 수행, 덩어리같은 코너 영역 클러스터 생성 
 ---
 ### Camera pose and projection
-
-$$
-\begin{align*}
-{}^{c}\boldsymbol{p}_{j} &= {}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{j} \quad \mathbf{E}\in\mathbb{R}^{4\times4}, SE(3) \\[6pt]
-\begin{pmatrix} u_i \\ v_i \end{pmatrix}
-&= \mathrm{CamProj}({}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{i}) \\[6pt]
-\mathrm{CamProj}
-\begin{pmatrix} x \\ y \\ z \\ 1 \end{pmatrix}
-&=
+- World to camera coordinate
+$${}^{c}\boldsymbol{p}_{j} ={}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{j} \quad \mathbf{E}\in\mathbb{R}^{4\times4}, SE(3)$$
+- Camera projection model
+$$\begin{pmatrix} u_i \\ v_i \end{pmatrix}
+= \mathrm{CamProj}({}^{c}\mathbf{E}_{W}{}^{W}\boldsymbol{p}_{i})$$
+- Pin-hole camera projection with radial FOV warping
+$$\mathrm{CamProj}
+\begin{pmatrix} x \\ y \\ z \\ 1 \end{pmatrix}=
 \begin{pmatrix} u_0 \\ v_0 \end{pmatrix}
 +
 \begin{bmatrix} f_u & 0 \\ 0 & f_v \end{bmatrix}
 \frac{r'}{r}
-\begin{pmatrix} \frac{x}{z} \\ \frac{y}{z} \end{pmatrix} \\[8pt]
-r &= \sqrt{\frac{x^2+y^2}{z^2}} \\[6pt]
-r' &= \frac{1}{\omega}\arctan\left(2r\tan\frac{\omega}{2}\right) \\[6pt]
-{}^{c}\mathbf{E}'_{\mathrm{w}} &= M{}^{c}\mathbf{E}_{\mathrm{w}} = \exp(\mu){}^{c}\mathbf{E}_{\mathrm{w}}, \quad μ\in \mathbb{R}^6, \mathfrak{se}(3) \quad M\in\mathbb{R^{4\times4}}
-\end{align*}
-$$
+\begin{pmatrix} \frac{x}{z} \\ \frac{y}{z} \end{pmatrix}$$
+---
+### Camera pose and projection
+- Normalized radius
+$$r = \sqrt{\frac{x^2+y^2}{z^2}}$$
+- FOV radial-distortion mapping (Devernay-Faugeras model)
+$$r' = \frac{1}{\omega}\arctan\left(2r\tan\frac{\omega}{2}\right)$$
+- Changes to camera pose
+$${}^{c}\mathbf{E}'_{\mathrm{w}} = M{}^{c}\mathbf{E}_{\mathrm{w}} = \exp(\mu){}^{c}\mathbf{E}_{\mathrm{w}}, \quad μ\in \mathbb{R}^6, \mathfrak{se}(3) \quad M\in\mathbb{R^{4\times4}}$$
 ???
 E는 4x4 SE(3) Transformation matrix
 M은 4x4 증분 camera motion
 ---
 ### Patch Search
+.f-90.mb-02[
 - 3d map point($p$)가 현재 카메라 프레임의 어느 위치($u_c,v_c$)에 있는지 찾아내는 과정
 - $Camproj()$ 로 투영된 픽셀 위치 근처에서 실제 특징점 패치를 찾고 reprojection error를 구하기 위함
-1. Patch Warping (Affine Warp)
+]
+
+**1. Patch Warping (Affine Warp)**
 
 .pull-left[
 $$\mathbf{A} = \begin{bmatrix}
@@ -148,22 +154,28 @@ $$\mathbf{A} = \begin{bmatrix}
 **scale** but also the **variations in lens distortion** across the image.
 ]
 ---
-2. 이미지 피라미드 레벨 선택
-   - 특징점이 이미지 피라미드 레벨에서 어떤 크기로 보일지 계산
-   1. $det(\mathbf{A})$ : 단위 픽셀 면적인 현재 프레임(level 0)에서 몇 픽셀 면적 차지하는지
-   2. $\frac{det(\mathbf{A})}{4^l}$ : 피라미드 레벨별 면적 감소량 계산해 1에 가까운 레벨을 특징점의 source level로 선택
-3. 패치 템플릿 생성 및 매칭
-  - 특징점 찾기 위해 현재 시점에 맞게 변형된 이미지 템플릿 생성
-  1. source keyframe에 젖아된 특징점 패치를 현재 카메라 각도에 맞춰 워핑행렬 $\frac{A}{2^l}$ 적용해 변형
-  2. 변형된 좌표를 정수 픽셀에 위치 시키기 위해 주변 4개 픽셀값을 가중평균 (Bilinear interpolation)
-  3. 조명 보정 위해 8x8 패치 내 모든 픽셀 평균 밝기값을 뺌 (Zero-mean)
-  4. FAST 코너 위치에 대해 SSD(Sum of Squared Differences) 계산해 차이 적고 임계값보다 낮으면 특징점이 있다고 판단 
-  $$SSD = \Sigma(I_{template}-I_{target})^2$$
+<ol start="2">  
+<li>** Scale selection **</li>
+- 특징점이 이미지 피라미드 레벨에서 어떤 크기로 보일지 계산
+1. $det(\mathbf{A})$ : 단위 소스 픽셀이 현재 프레임(level 0)에서 차지하는 면적
+2. $\frac{det(\mathbf{A})}{4^l}$ : 레벨 별 면적 감소량
+- 각 피라미드 레벨 $l$ 에서의 면적이 1에 가까운 레벨 선택
+
+.f-90.mt-02[
+<li> **Patch search template**</li>
+]
+  1. **템플릿 생성**: source keyframe에 저장된 특징점 패치 affine warping $\frac{A}{2^l}$ 적용 후 Bilinear interpolation 샘플링 
+  1. **조명 보정**: 8x8 패치 내 모든 픽셀 평균 밝기값 빼 Zero-mean 처리
+  1. **후보 탐색**: 예측 위치 중심으로 fixed radius 정하고, 해당 영역 내 FAST Corners위치를를 target pyramid level에서 zero-mean 제곱합 계산 수행
+  1. **매칭 선책 및 판정**: 제곱합이 가장 작은 위치로 최적 매칭 선택하고, 임계값보다 작으면 해당 패치 발견으로 판단
 ---
-4. Sub-pixel refinement
-  - 상위 피라미드 레벨 일부 특징점들에 우선 적용해 추적 정확도 높임
+<ol start="5">  
+<li> **Sub-pixel refinement**</li>
+.f-90[
+  - coarse set 특징점들에 적용해 추적 정확도 높임
   - Lucas-Kanade는 매 반복마다 이미지 gradient가 달라져 느림
   - IC(Inverse Compositional)로 타겟 이미지 대신 템플릿으로 $H^{-1}$ 구해 이미지 보정 값 계산
+]
 .f-80[
   $$\sum_{\mathbf{x}} [T(\mathbf{W}(\mathbf{x}; \Delta \mathbf{p})) - I(\mathbf{W}(\mathbf{x}; \mathbf{p}))]^2$$
   $$\Delta \mathbf{p} = H^{-1} \sum_{\mathbf{x}} \left[ \nabla T \frac{\partial \mathbf{W}}{\partial \mathbf{p}} \right]^T [I(\mathbf{W}(\mathbf{x}; \mathbf{p})) - T(\mathbf{x})]$$
@@ -182,57 +194,68 @@ $$\mathbf{A} = \begin{bmatrix}
 ### Pose Update
 - reprojection error 정의
 $$e_j = \begin{pmatrix} \hat{u}_j \\ \hat{v}_j \end{pmatrix} - \operatorname{CamProj}\left(\exp(\mu) E_{cw} p_j\right)$$
-- 
-Iteratively Reweighted Least Squares (IRLS)
+- Iteratively Reweighted Least Squares (IRLS)
 $$\mu' = \underset{\mu}{\operatorname{argmin}} \sum_{j \in S} \operatorname{Obj}\left(\frac{|e_j|}{\sigma_j}, \sigma_T\right)$$
-  - $\sigma_j$ : 측정 노이즈, $\sigma^2 = 2^{2l}$ 적용해 해상도 낮은 레벨에서 찾을수록 오차 허용
+  - $\sigma_j$ : 측정 노이즈, $\sigma^2 = 2^{2l}$ 적용해 coarse level일수록 오차 허용
   - $\operatorname{Obj}\left(\cdot, \sigma_T\right)$ : Tukey biweight 손실함수
-.right.mr-20[![:scale 25%](img/ORB/tukey_loss.png)]
+.right.nr-03.nt-10[![:scale 30%](img/ORB/tukey_loss.png)]
 ---
 ### Tracking quality and failure recovery
-- 매 프레임 마다 성공 관측 비율로 추적 품질 추정
-- motion blur, occlusion, incorrect position estimate
-- 추적 품질이 좋지 않을경우 추적 복구 절차 시작
-1. 현재 프레임에서 특징 뽑음
-2. descriptor로 저장된 keyframe에서 유사 후보 검색
-3. 후보 keyframe에 연결된 3d point로 3d-2d 대응 구성
-4. PnP RANSAC으로 초기 포즈 푸정
-5. reprojection error 최소화해 포즈 정밀화
+.f-90[
+- 매 프레임 마다 관측 성공한 특징점 개수 비율로 추적 품질 추정
+- 추적이 상실될 경우 Relocalisation 절차 시행
+1. **저해상도 템플릿 생성**: .f-95[현재 프레임을 Small Blurry Image 템플릿으로 변환]
+
+1. **Global 유사도 연산**: .f-95[생성된 템플릿과 Global Map 내 모든 keyframe 템플릿 간 Zero-mean Sum of Squared Differences 기반 픽셀 단위 유사도 연산]
+1. **Reference KeyFrame** 선정: .f-95[ZMSSD Cost가 최소가 되는 최적의 keyframe]
+1. **SE(2) Direct Alignment 및 오차 도출**: .f-95[현재 프레임과 Reference KeyFrame 템플릿 간 2D 회전 및 평행이동 조정해 정합 후 오차 score 산출]
+
+1. **SE(3) Pose, 6-DoF 추정**: .f-95[도출된 SE(2) 변환을 $CamProj()$ 통해 SE(3) 공간으로 승격시킨 후 Reference KeyFrame의 Global pose(SE(3))와 결합하여 현재 카메라의 6-DoF pose 추정]
+1. **Threshold 기반 복구 판정**: .f-95[산출된 최종 정합 오차가 threshold 미만일 경우 relocalisation 성공으로 판정]
+]
+???
+가우시안블러로 sbi
 ---
 # Mapping
-.nt-02.pull-left[
+.nt-02.pull-left-70[
 - Map initialization
-    1. 사용자가 카메라를 평행이동하며 키를 눌러 keyframe 생성
-    2. 첫 keyframe에서 고해상도 레벨에 있는 FAST 코너를 2d patch 후보로 초기화
-    3. essential matrix 추정 후 triangulation으로 초기 3d map 생성 &rarr; BA
+    1. 사용자가 카메라를 작업 공간 위에 놓고 첫번째 키 입력해 keyframe 생성
+    2. 첫 keyframe에서 coarsest level의 FAST 코너 선택해 2d patch 후보로 초기화
+    3. 사용자가 카메라를 이동 후 두번째 키 입력해 keyframe 생성
+    4. 5 point algorithm + RANSAC으로 essential matrix 추정 후 triangulation으로 초기 3d map 생성
+    5. Bundle Adjustment로 정밀화해 pose와 3D point 최적화
+    
     - 스케일 고정을 위해 baseline을 10cm로 가정
-    - plane에 맵을 맞추기 위해 삼중점을 RANSAC으로 선택해 dominant plane계산 (최적화하지 않음 )
+    - AR 맵 정렬 위해 RANSAC으로 3점 선택해  dominant plane 검출
 ]
-.nt-03[
-.pull-right.right[![:scale 80%](img/ORB/fig2.png)]
+.nt-03.nr-03[
+.pull-right-30[![](img/ORB/fig2.png)]
 ]
 ---
-### keyframe insertion and epipolar search
-.f-85.nt-01[
+### Keyframe insertion 
+.nt-01[
 - keyframe 선정 조건
-  - 트래킹 품질 좋음
+  - 관측 성능 비율 좋음(트래킹 품질 좋음)
   - 마지막 keyframe이후 20 프레임 경과
   - 관찰된 point들의 평균 깊이에 따라 최소 거리 결정
+  
 - keyframe 생성시 처리
     - tracking thread: 추정한 pose와 특징 관측값으로 초기화 
     - mapping thread: tracking에서 측정 못한 가시 포인트 reprojection해 추가 관측 시도
-- Epipolar Search 
-    1. 후보점 선정
-        - 새 keyframe의 각 피라미드 레벨에서 계산해둔 FAST 코너 후보 불러옴
-        - NMS, Shi-Tomasi 점수로 잘 구별되는 코너만 남김
-        - 기존 관측 근처인 후보 제외해 신규 3d point 후보 생성
-    1. 대응 keyframe 선택
-        - 각 후보를 triangulation할 두번째 뷰를 이미 있는 keyframe 중 카메라 중심과 거리가 가장 작은것 선택
-    1. matching
-        - keyframe의 관찰 point의 깊의 분포로 깊이 prior 설정해 탐색 범위 제한
-        - 동일 피라미드 레벨에서 epipolar search(zero-mean SSD)
-        - SSD가 임계값 이하일 경우 triangulation, map에 추가
-]
+  ]
+---
+### Epipolar search
+1. 후보점 선정
+    - 새 keyframe의 각 피라미드 레벨에서 계산해둔 FAST 코너 후보 불러옴
+    - NMS, Shi-Tomasi 점수로 잘 구별되는 코너만 남김
+    - 기존 관측 근처인 후보 제외해 신규 3d point 후보 생성
+1. 대응 keyframe 선택
+    - 각 후보를 triangulation할 두번째 뷰를 이미 있는 keyframe 중 카메라 중심과 거리가 가장 작은것 선택
+1. Matching
+    - keyframe의 관찰 point의 깊의 분포로 깊이 prior 설정해 탐색 범위 제한
+    - 동일 피라미드 레벨에서 epipolar search(zero-mean SSD)
+    - SSD가 임계값 이하일 경우 triangulation, map에 추가
+
 ---
 .f-90[
 - structure matrix $\mathbf{M}$
@@ -248,7 +271,7 @@ min 람다가 임계값보다 크면 코너
 
 ---
 ### Bundle Adjustment
-- reprojection error
+- Reprojection error
 
 $$\mathbf{e}_{ji}=\begin{bmatrix}\hat u_{ji}\\\hat v_{ji}\end{bmatrix}-\mathrm{CamProj}\!\big(\exp(\mu)\,E_{CW}\,p_j\big).$$
 - Global BA
@@ -282,7 +305,6 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
 ]
 ???
 추가된 새 포인트는 two view에서만 있으므로 관측 집합을 풍부하게함
----
 # Results
 - Tracking performance on live video
     - 책상 및 주변 1,656 프레임의 실시간 비디오 입력
@@ -292,10 +314,8 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
     - 이미지 피라미드의 가장 세밀한 레벨(51%), 거친 레벨(7%)에 특징점 분포
     - Relocalisation: 추적이 끊겨 다시 위치를 찾을 때 최대 90ms
 .center.mt-01[![:scale 80%](img/table1.png)]
----
 # Results
 .center.nt-02[![:scale 60%](img/ORB/PTAMfig3.png)]
----
 # Results
 .nt-02[
 - Mapping scalability
@@ -307,7 +327,6 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
 ]
 .center.mt-01[![:scale 40%](img/ORB/table2.png)]
 .center.mt-01[![:scale 70%](img/ORB/PTAMfig4.png)]
----
 # Results
 .nt-01[
 - Synthetic comparison with EKF-SLAM
@@ -325,7 +344,6 @@ lie 파라미터 뮤, 관측이 픽셀과 표준편차 가짐
 andrew davison의 monoslam을 개선한 real time slam relocalisaition버전의 ekf slam
 ekf는 모든 특징점 간 covariance를 계산해야함 연산량 많음 
 PTAM은 ba해서 더 정밀하게 가능 
----
 # Results
 .nt-02[
 - Subjective comparison with EKF-SLAM
@@ -340,8 +358,7 @@ PTAM은 ba해서 더 정밀하게 가능
 .center[![:scale 55%](img/ORB/PTAMfig7.png)]
 ---
 # 한계점
-1. corner 특징점 의존해 motion blur에 취약<br>
-&rarr;
+1. corner 특징점 의존해 motion blur에 취약
 1. 반복된 구조일 경우 epipolar search에 outlier 발생 <br>
 &rarr;
 1. Loop closing 부재<br>
@@ -482,38 +499,35 @@ spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한
 ---
 ### Map points, Keyframes and their Selection
 - map point $p_i$
-    - ${}^{w}X_{i}$, world coordinate system
+    - ${}^{}X_{w,i}$, world coordinate system
     - $n_i$, viewing direction
     _ $D_i$, ORB descriptor
     - $d_{max}, d_{min}$, distance which the point can be observed
     - PTAM보다 Point수가 더 적음
 - keyframe $K_i$
-    - ${}^{i}\mathbf{T}_w$, rigid body transformation 
+    - $\mathbf{T}_{iw}$, rigid body transformation 
     - camera intrinsics (focal length, principal point)
     - ORB features extracted in the frame(Undistored)
 ---
 ### Covisibility graph
 .pull-left-70.nt-01[
 .f-85.nt-02[
-- node:KeyFrame
-- edge:두 KeyFrame이 공유하는 map point 수(가중치 θ)
+- edge:두 KeyFrame이 공유하는 map point 수(가중치 θ, 기본 15)
 - 전체 연결 정보 담은 dense한 무향 가중 그래프
 - 로컬 맵 선택(어떤 KeyFrame들이 현재 프레임과 covisible한지), 특징 매칭 범위 결정, 키프레임 이웃 관계 판단
 ]
-
 ### Spanning tree 
 .f-85.nt-02[
 - covisibility graph 바탕으로 시스템이 점진적으로 유지
 - 모든 node를 연결하면서 edge는 최소화하는 spare tree
+- 가장 많은 map point를 공유하는 keyframe이 부모
 - Essential Graph의 기반 keyframe 삽입,삭제 시 연결성 유지 위해 사용
 ]
-
 ### Essential Graph
 .f-85.nt-02[
-- node:모든 KeyFrame
-- edge: Spanning tree edge + covisibility에서 가중치 큰 edgs + loop closure edge
-- covisibility graph보다 sparse, loop closing을 위해 강한 네트워크 유지하도록 설계
-- pose graph optimization 수행할 때 사용, Sim(3) 제약 가진 edge들로 구성되어 루프에서 생긴 drift를 전체 그래프에 분배
+- edge: Spanning tree edge + covisibility에서 가중치 큰(θ=100) edgs + loop closure edge
+- 모든 keyframe node는 동일하나 covisibility graph보다 edge 수 줄임 
+- pose graph optimization, Sim(3) 제약 가진 edge들로 구성되어 루프에서 생긴 drift를 전체 그래프에 분배
 ]
 ]
 .pull-right-30.nr-02[![](img/ORB/graph.png)]
@@ -553,7 +567,7 @@ spawn-and-cull: 키프레임/맵포인트는 관대하게 생성하고 엄격한
 1. find initial correspondence
   - current frame $F_c$에서 ORB 추출 후 reference frame $F_r$에서 $\mathbf{x}_c ↔ \mathbf{x}_r$ 
 1. Parallel computation of the two models
-$$ \mathbf{x}_c = {}^{c}\mathbf{H}_r\mathbf{x}_r \qquad \mathbf{x}_c^\top{}^{c}\mathbf{F}_r\mathbf{x}_r=0$$
+$$\mathbf{x}_c = \mathbf{H}_{cr} \mathbf{x}_r \qquad \mathbf{x}_c^\top{}^{}\mathbf{F}_{cr}\mathbf{x}_r=0$$
   - normalized DLT, 8-point algorithm 사용해 RANSAC내에서 수행
   - 반복 수행해 각 모델마다 점수 $S_M$ 산출
 $$\begin{align*}
@@ -585,14 +599,14 @@ $\Gamma$: $T_H$와 동일하고 두 모델이 inlier 영역에서 동일한 d에
      - reprojection error 낮음
 1. fundamental matrix
   - essential matrix로 변환
-$${}^{c}\mathbf{E}_{r} = \mathbf{K}^T {}^{c}\mathbf{F}_{r} \mathbf{K}$$
+$${}^{}\mathbf{E}_{cr} = \mathbf{K}^T {}^{}\mathbf{F}_{cr} \mathbf{K}$$
   - SVD으로 4개 motion 가설 복구
   - homography와 동일 조건으로 선택<br>
 
 &rarr; BA 수행 
 ---
 # Tracking
-![:scale 30%](img/ORB/orbfig3.png)
+.pull-left.nt-03[
 ### ORB extraction
 - scale factor 1.2로 8개 scale에서 FAST 코너 추출
   - 512x384 ~ 750x480: 1000개, KITTI(1241x376): 2000개
@@ -600,17 +614,26 @@ $${}^{c}\mathbf{E}_{r} = \mathbf{K}^T {}^{c}\mathbf{F}_{r} \mathbf{K}$$
   - 일부 셀에 코너 없으면 각 셀에 유지되는 코너 양 조절
 - ORB descriptor 계산
   - PTAM patch correlation과 달리 모든 특징점 매칭에 사용
-  
+]
+.pull-right.nr-05.nt-04[
+![:scale 80%](img/ORB/orbfig3.png)
+]
+
+---
+
 ### Initial pose estimation from previous frame
 - constant velocity model로 pose 추정
-- 마지막 frame에서 관찰된 map point에 대해 guided search 수행
-- 매칭 발견 수에 따라 radius조절
+- guided search 
+    - 마지막 frame에서 현재 frame에 투영해 주변에서만 ORB feature 검색 및 매칭
+- 충분한 매칭이 없으면 wider search
+    -  탐색 반경 radius를 유동적으로 넓혀 매칭 재시도
+
 ### Initial pose estimation via global relocalization
 - motion model tracking이 실패할 경우
 - frame을 BoW로 변환해 database에서 후보 keyframe query
 - 각 keyframe에 연관된 map point와 ORB 간 correspondence 계산
 - RANSAC, PnP로 pose 추정 후 keyframe map point의 추가 매치를 찾기 위한 guided search 수행
-
+---
 ### Track Local Map
 - 현 frame에서 pose update와 더많은 map point 찾기위해 local map만 투영해 검색 
   - $K_1$: 현재 frame과  map point를 공유하는 keyframe들 집합
@@ -622,9 +645,10 @@ $${}^{c}\mathbf{E}_{r} = \mathbf{K}^T {}^{c}\mathbf{F}_{r} \mathbf{K}$$
   1. distance: camera center-point $[d_{min},d_{max}]$, ORB scale invariance 범위 유지 위해
   1. scale: $s=\frac{d}{d_{min}}$, 이미지 피라미드 스케일 레벨
   1. near descriptor matching: 투영위치 근처+ 예측 스케일+ 미매칭 후보만 Hamming distance 최소 대응 선택
+
 ???
 viewing direction: 카메라중심부터 포인트까지 뷰잉잉레이와 포인트의 평균관측방향n간의 각도 
-distance:카메라와 포인트 간 거리리 계산
+distance:카메라와 포인트 간 거리 계산
 map point ORB descriptor $D$와 매칭되지 않은 현재 frame ORB feature중 투영 위치 $x$근처, 예측된 scale level에 해당하는 특징만 비교해 Hamming distance로 최적 대응 선택  
 ---
 
@@ -643,45 +667,55 @@ map point ORB descriptor $D$와 매칭되지 않은 현재 frame ORB feature중 
 - local 단위에서 정확한 최적화해 추적 안정성 향상
 - 3d point 추가해 맵 확장
 - 불필요한 데이터 제거
+
 ### Keyframe insertion
 1. covisibility graph update: 새 node $K_i$추가, 다른 keyframe과 공유 map point로 edge update
-1. spanning tree update: 가장 많은 map point를 공유하는 keyframe이 부모
-1. compute the BoW vector: triangulation위한 data association에 도움 
+1. spanning tree update: 가장 많은 map point를 공유하는 keyframe과 연결
+1. compute the BoW vector: triangulation위한 data association에 도움되는 BoW vector 계산
+---
 ### Recent map points culling
 - 새로 triangulation 된 후 받아야할 검증
 1. 보일것으로 예측되는 frame들 중 >25% 이상 실제 추적되어야 함
 1. 한개 이상 keyframe 경과시 최소 3개 keyframe에서 관찰되어야함
 - keyframe이 삭제되거나, local BA에서 outlier 제거 시 반영
+
 ### New map point creation
-- 현재 keyframe의 미매칭 ORB feature를 다른 keyframe와 매칭 &rarr; BoW place recognition
+- $K_i$의 미매칭 ORB feature를 $K_c$와 매칭 &rarr; BoW place recognition
 - epipolar constraint, triangulation
 - 두 카메라 depth, parallax, reprojection error, scale consistency 확인
 - 초기 맵 생성 후 주변 연결 keyframe에 projection해 추가 관측 검색 &rarr; Track local map
+---
+
 ### Local bundle adustment
 - Tracking thread와 병렬 실행
 - keyframe 삽입 시 interrupt
 - 현재 keyframe $K_i$, covisibility graph로 연결 된 이웃 keyframe들$K_c$, 관측하는 모든 map point 최적화
 - 같은 관측을 보지만 이웃이 아닌경우 최적화에 포함되나 고정됨
+
 ### Local keyframe culling
 - $K_c$ 중 90% map point가 최소 3개 다른 keyframe에서 동일하거나 세밀한 스케일에서 관측되면 제거
 
 ---
 # Loop Closing
 - local mapping에서 처리된 마지막 keyframe $K_i$ 받아 루프 감지 
+
 ### Loop candidate detection
 1. $K_i$ BoW vector와 covisibility graph 내 모든 이웃간 유사도 계산($\theta_{min} = 30$)후 가장 낮은 $s_{min}$유지
 1. database query에서 $s_{min}$보다 낮은 모든 keyframe 제거
 1. $K_i$에 직접 연결된 keyframe제거
 1. 연속 3개 루프 후보가 covisible로 연결되어야 함 
+---
+
 ### Compute the similarity transformation
 - scale drift를 이유로 Sim(3) 계산해야
 - input: $K_i$의 map point, 루프 후보 $K_l$의 map point 사이 ORB correspondence($P_i,Q_i$의 3D-3D)
 1. RANSAC 반복으로 Sim(3) 생성
-    - Horn method로 similarity transform ${}^{l}S_{i}$ 추정
-    - 모든 대응응에 대해 error 측정 후 inlier 개수가 충분하지않으면 반복
+    - Horn method로 similarity transform ${}^{}S_{il}$ 추정
+    - 모든 대응에 대해 error 측정 후 inlier 개수가 충분하지않으면 반복
 1. optimization, guided matching
-    - inlier와 잔파 분포가 충분하면 루프로 수락
-    
+    - inlier와 residual 분포가 충분하면 루프로 수락
+---
+
 ### Loop fusion
 - 중복된 map point 융합하고 loop closing 연결할 covisibility graph의 edge 삽입
 1. $K_i$ pose 보정
@@ -690,8 +724,8 @@ map point ORB descriptor $D$와 매칭되지 않은 현재 frame ORB feature중 
   - map point를 보정된 $K_i$와 이웃에 투영
   - 좁은 영역에서 ORB 매칭 후 하나의 ID로 합침(fuse)
 1. covisibility edge 추가
-`
-### Essential graph optimization
+
+&rarr; Essential graph optimization
 ---
 
 # Appendix
@@ -713,6 +747,7 @@ $$C = \sum_{i,j} \rho_h (\mathbf{e}_{i,j}^T \Omega_{i,j}^{-1} \mathbf{e}_{i,j})$
 - $\rho_h$: Huber loss
 - $\Omega_{i,j} $: 관측 covariance matrix 2x2
 - ${}^{i}e_j$: reprojection error
+---
 
 ### pose graph optimization
 $$\mathbf{e}_{i,j} = \log_{\text{Sim(3)}}(\mathbf{S}_{ij} \mathbf{S}_{jw} \mathbf{S}_{iw}^{-1}), \quad \mathbf{e}_{i,j} \in \mathbb R^7$$
@@ -720,6 +755,7 @@ $$\mathbf{e}_{i,j} = \log_{\text{Sim(3)}}(\mathbf{S}_{ij} \mathbf{S}_{jw} \mathb
 $$C = \sum_{i,j} \left( \mathbf{e}_{i,j}^T \mathbf{\Lambda}_{i,j} \mathbf{e}_{i,j} \right)$$
 - $\mathbf{\Lambda}_{i,j}$: information matrix of edge(identity)
 - loop closing에서는 keyframe 하나를 anchor로 고정하고 나머지 keyframe을 조정 
+---
 ### Relative Sim(3) Optimization
 $$\begin{align*}
 \mathbf{e}_1 &= \mathbf{x}_{1,i} - \pi_1(\mathbf{S}_{12}, \mathbf{X}_{2,j}) \\
